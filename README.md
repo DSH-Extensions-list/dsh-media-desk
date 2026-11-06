@@ -274,6 +274,8 @@ npm pack                       # build the installable tgz
 
 Restart DeepSeek Harness after changing `src/`.
 
+**Upgrading from the Chinese 2.x releases:** this fork does not migrate that content. It starts fresh, so anyone upgrading from those releases should keep using [upstream](https://github.com/woniuniuniu/dsh-media-desk).
+
 **Security:** Every route is authenticated by the host. Model output and fetched content are reduced to known fields with length limits, and only allow-listed operations run. Pasted links can't reach localhost or private networks. `monid` runs without a shell, and account IDs must match fixed formats. Please report vulnerabilities privately through [Security Advisories](https://github.com/arzvaak/dsh-media-desk/security/advisories/new).
 
 <br>

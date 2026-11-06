@@ -3,6 +3,13 @@ import { t } from './i18n.js'
 
 const WIDTH = 1920
 const HEIGHT = 1080
+const MARGIN = 100
+const MAX_LINES = 3
+const MAX_SIZE = 148
+const MIN_SIZE = 64
+const REFERENCE_SIZE = 100
+// English editorial serif: Georgia ships with macOS and Windows, Liberation Serif with common Linux desktops.
+const SERIF = 'Georgia, "Times New Roman", "Liberation Serif", serif'
 
 function loadImage(src) {
   return new Promise((resolve, reject) => {
@@ -47,6 +54,29 @@ function wrap(ctx, text, maxWidth, maxLines) {
   return out.slice(0, maxLines)
 }
 
+/**
+ * Pick the display size for an English cover line. The width is measured once at
+ * a reference size and scaled to the text area, then confirmed with a real wrap,
+ * so a ragged word break cannot push the line past the three-row cap.
+ * @param {CanvasRenderingContext2D} ctx - A context with a 2D font.
+ * @param {string} text - The cover line.
+ * @returns {number} Font size in pixels.
+ */
+function fitSize(ctx, text) {
+  const available = WIDTH - MARGIN * 2
+  ctx.font = `700 ${REFERENCE_SIZE}px ${SERIF}`
+  const referenceWidth = Math.max(ctx.measureText(text).width, 1)
+  // Three rows of the text area, scaled from the reference measurement.
+  let size = Math.round((MAX_LINES * available * REFERENCE_SIZE) / referenceWidth)
+  size = Math.min(MAX_SIZE, Math.max(MIN_SIZE, size))
+  // Word breaks leave a ragged right edge, so step down until a real wrap fits.
+  for (;;) {
+    ctx.font = `700 ${size}px ${SERIF}`
+    if (size === MIN_SIZE || wrap(ctx, text, available, MAX_LINES + 1).length <= MAX_LINES) return size
+    size = Math.max(MIN_SIZE, Math.round(size * 0.94))
+  }
+}
+
 function drawBackground(ctx) {
   const base = ctx.createLinearGradient(0, 0, WIDTH, HEIGHT)
   base.addColorStop(0, '#1a1b3a')
@@ -81,18 +111,16 @@ export async function composeCover({ src, text }) {
     ctx.fillStyle = shade
     ctx.fillRect(0, 0, WIDTH, HEIGHT)
   }
-  // Estimate width in full-width units: Latin letters are roughly half.
-  const units = [...text].reduce((n, ch) => n + (/[\u0000-\u024f]/.test(ch) ? 0.55 : 1), 0)
-  const size = units > 12 ? 112 : 148
-  ctx.font = `700 ${size}px "Songti SC", "STSong", "Noto Serif SC", serif`
+  const size = fitSize(ctx, text)
+  ctx.font = `700 ${size}px ${SERIF}`
   ctx.fillStyle = '#fff'
   ctx.textBaseline = 'alphabetic'
   ctx.shadowColor = 'rgba(0, 0, 0, .35)'
   ctx.shadowBlur = 24
-  const lines = wrap(ctx, text, WIDTH - 200, 3)
+  const lines = wrap(ctx, text, WIDTH - MARGIN * 2, MAX_LINES)
   const lineHeight = size * 1.24
   lines.forEach((line, index) => {
-    ctx.fillText(line, 100, HEIGHT - 100 - (lines.length - 1 - index) * lineHeight)
+    ctx.fillText(line, MARGIN, HEIGHT - MARGIN - (lines.length - 1 - index) * lineHeight)
   })
   return canvas
 }

@@ -134,59 +134,9 @@ export function seedPresets() {
 /** Old three templates map to the presets that replaced them, active style included. */
 const OLD_TEMPLATES = { seed_style_calm: 'preset_business', seed_style_story: 'preset_story', seed_style_sharp: 'preset_career' }
 
-// Category names 2.x builds stored. Written as escapes so this file stays plain
-// ASCII and a CJK sweep of the source comes back empty.
-const CATEGORY_ALIASES = {
-  '\u79d1\u6280\u6570\u7801': 'Tech',
-  '\u65c5\u884c\u63a2\u5e97': 'Travel & food',
-  'Vlog \u751f\u6d3b': 'Lifestyle',
-  '\u89c2\u70b9\u8ba4\u77e5': 'Opinion',
-  '\u5e72\u8d27\u6559\u7a0b': 'Tutorials',
-  '\u79cd\u8349\u6d4b\u8bc4': 'Reviews',
-  '\u60c5\u611f\u6545\u4e8b': 'Stories',
-  '\u70ed\u70b9\u8d44\u8baf': 'News',
-}
-
-const TEXT_FIELDS = ['name', 'summary', 'tone', 'sentences', 'opening', 'structure', 'words', 'avoid', 'samples']
-
-// Full-width punctuation counts too: a preset written in Chinese is full of it.
-const CJK = /[\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]/
-
 export const PRESET_VERSION = 2
 
-const hasCjk = value => value !== undefined && CJK.test(JSON.stringify(value))
-
-function mapCategory(category) {
-  return CATEGORY_ALIASES[category] ?? category
-}
-
-/**
- * Bring preset rows in line with the English presets: map old category names,
- * and replace the text of a row that is still Chinese. A preset the user edited
- * in English keeps the edit, so this is safe to run on every load.
- * @param {object[]|undefined} styles - rows of state.styles, edited in place.
- */
-function normalizePresets(styles) {
-  for (const row of styles ?? []) {
-    if (!row) continue
-    row.category = mapCategory(row.category)
-    if (!row.preset) continue
-    const preset = STYLE_PRESETS.find(entry => entry.id === String(row.id).replace(/^preset_/, ''))
-    if (!preset) continue
-    // Field by field, so a preset the user edited in English keeps that edit
-    // while the fields still in Chinese are translated.
-    let translated = false
-    for (const field of TEXT_FIELDS) {
-      if (!hasCjk(row[field])) continue
-      row[field] = structuredClone(preset[field])
-      translated = true
-    }
-    if (translated) row.source = 'Preset'
-  }
-}
-
 export function migratePresets(state) {
-  normalizePresets(state.styles)
   if (state.presetVersion >= PRESET_VERSION) return state
   const kept = (state.styles ?? []).filter(row => !(row.id in OLD_TEMPLATES))
   const known = new Set(kept.map(row => row.id))

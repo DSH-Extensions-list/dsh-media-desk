@@ -56,13 +56,12 @@ function meta(html, names) {
 }
 
 function followerHint(text) {
-  // Profile pages are read in whatever language the platform serves, so the
-  // Chinese forms for followers and large counts stay parseable. They are
-  // written as escapes so this file itself carries no literal CJK.
-  const m = /([\d.,]+)\s*([\u4e07\u5343kKmM])?\s*(?:[\u7c89\u4e1d]|[\u5173\u6ce8\u8005]|followers)/i.exec(text)
-    ?? /(?:[\u7c89\u4e1d]|[\u5173\u6ce8\u8005]|followers)[^\d]{0,6}([\d.,]+)\s*([\u4e07\u5343kKmM])?/i.exec(text)
+  // Pages are requested with an English accept-language header, so only the
+  // English forms are parsed: "1.2k followers", "3m followers", "followers 12000".
+  const m = /([\d.,]+)\s*([kKmM])?\s*followers/i.exec(text)
+    ?? /followers[^\d]{0,6}([\d.,]+)\s*([kKmM])?/i.exec(text)
   if (!m) return null
-  const unit = { '\u4e07': 1e4, '\u5343': 1e3, k: 1e3, m: 1e6 }[String(m[2] ?? '').toLowerCase()] ?? 1
+  const unit = { k: 1e3, m: 1e6 }[String(m[2] ?? '').toLowerCase()] ?? 1
   const value = Number(m[1].replace(/,/g, '')) * unit
   return Number.isFinite(value) ? Math.round(value) : null
 }

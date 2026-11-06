@@ -237,12 +237,6 @@ test('harvest reads metadata and refuses redirects into the private network', as
   assert.equal(info.image, 'https://93.184.216.34/a.jpg')
   assert.equal(info.followers, 12000)
 
-  // A profile page served in Chinese still yields its follower count. The
-  // fixture is escaped so the test file itself carries no literal CJK.
-  const chinese = '<html><head><title>Backup title</title><meta name="description" content="\u7c89\u4e1d 1.2\u4e07"></head></html>'
-  const zh = async () => new Response(chinese, { headers: { 'content-type': 'text/html' } })
-  assert.equal((await harvest('https://93.184.216.34/u', zh)).followers, 12000)
-
   const redirect = async () => new Response(null, { status: 302, headers: { location: 'http://127.0.0.1/admin' } })
   await assert.rejects(harvest('https://93.184.216.34/u', redirect), /private network|this machine/)
 })
@@ -556,6 +550,21 @@ test('chatPrompts only hands a finished draft to the model', () => {
   assert.doesNotMatch(chatPrompts(state, 'x', { focusId: item.id }).user, /<production>/)
 })
 
+test('Every model prompt pins its human-readable output to English', () => {
+  const state = seed()
+  const item = state.items[0]
+  const english = /in English/i
+  assert.match(chatPrompts(state, 'x', { focusId: item.id }).system, english)
+  // The revise prompt is appended to the chat prompt, so it carries the rule too.
+  item.production = { ...revisable(), article: 'Unique body' }
+  const revise = chatPrompts(state, 'x', { focusId: item.id }).system
+  assert.match(revise, /revise/)
+  assert.match(revise, english)
+  assert.match(articlePrompts(state, item, '').system, english)
+  assert.match(planPrompts(state, item, { imageCount: 1, shotCount: 1 }).system, english)
+  assert.match(stylePrompts('Material', '').system, english)
+})
+
 test('saveProduction writes the article, script and assets, with path characters stripped from the title', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'media-desk-save-'))
   try {
@@ -670,65 +679,23 @@ test('Style presets: old templates become the new presets, and clearing samples 
   assert.equal(state.activeStyleId, 'preset_travel')
 })
 
-test('migrateState upgrades upstream Chinese data, keeps edits, and rekeys imported identities', () => {
-  const legacy = {
-    sampleLang: 'zh', presetVersion: 1,
-    items: [
-      { id: 'seed_1', sample: true, title: 'My English title', body: '\u65e7\u6b63\u6587', tags: ['\u65e7\u6807\u7b7e'], source: '\u8def\u4e0a\u60f3\u5230', platform: '\u5c0f\u7ea2\u4e66', media: { src: 'media-desk/assets/poster.jpg', w: 720, h: 960 }, drafts: {}, production: { title: '\u4e2d\u6587\u6210\u7a3f' } },
-      { id: 'it_imported', sample: false, title: 'My imported post', platform: '\u5c0f\u7ea2\u4e66', externalId: '\u5c0f\u7ea2\u4e66:post1', drafts: {} },
-    ],
-    people: [
-      { id: 'newbie', sample: true, name: '\u60f3\u5165\u95e8\u7684\u5c0f\u6797', role: '\u76ee\u6807\u8bfb\u8005', note: '\u4e8c\u5341\u4e94\u5c81', traits: ['\u6015\u672f\u8bed'], tone: 0 },
-      { id: 'mine', name: '\u6211\u81ea\u5df1\u7684\u4eba\u8bbe', role: 'Custom', note: 'keep me', traits: [], tone: 1 },
-    ],
-    angles: [{ id: 'case', sample: true, name: '\u771f\u5b9e\u6848\u4f8b', hook: '\u4e00\u4e2a\u4eba\u505a\u4e86\u4ec0\u4e48', prompt: '\u4ece\u4e00\u4e2a\u5177\u4f53\u7684\u4eba\u5207\u5165\u3002' }],
-    skills: [{ id: 'seed_s_1', sample: true, name: '\u5f00\u5934\u5148\u7ed9\u6570\u5b57', rule: '\u5f00\u5934\u51fa\u73b0\u6570\u5b57\u3002', evidence: '\u793a\u4f8b\uff1a\u6765\u81ea 3 \u7bc7', source: '\u793a\u4f8b', status: 'active', confidence: 0.82 }],
-    accounts: [{ id: 'ac_imported', platform: '\u5c0f\u7ea2\u4e66', handle: 'me', externalId: '\u5c0f\u7ea2\u4e66:u1' }],
-    metrics: [{ id: 'm_1', itemId: 'it_imported', platform: '\u5c0f\u7ea2\u4e66', externalId: '\u5c0f\u7ea2\u4e66:post1', views: 10 }],
-    styles: [
-      { id: 'preset_news', preset: true, category: '\u70ed\u70b9\u8d44\u8baf', name: '\u70ed\u70b9\u8d44\u8baf', summary: 'My summary', tone: 't', sentences: 's', opening: 'o', structure: 'st', words: [], avoid: [], samples: [] },
-      { id: 'st_mine', category: '\u70ed\u70b9\u8d44\u8baf', name: '\u6211\u7684\u98ce\u683c', accountKey: '\u5c0f\u7ea2\u4e66:u1' },
-    ],
+test('migrateState drops the old language fields, defaults the active style, and migrates presets once', () => {
+  const state = {
+    sampleLang: 'zh', presetVersion: 1, activeStyleId: 'seed_style_calm',
+    items: [{ id: 'it_1', title: 'A title', otherLang: { title: 'stale' } }],
+    styles: [{ id: 'seed_style_calm', name: 'Calm' }, { id: 'st_mine', name: 'Mine' }],
   }
-  const once = migrateState(legacy)
-  const seedRow = buildSeed(NOW).items[0]
-  // Field by field: the English title survives while the Chinese body is translated.
-  assert.equal(once.items[0].title, 'My English title')
-  assert.equal(once.items[0].body, seedRow.body)
-  assert.deepEqual(once.items[0].tags, seedRow.tags)
-  assert.equal(once.items[0].source, seedRow.source)
-  assert.equal(once.items[0].platform, 'RedNote')
-  assert.match(once.items[0].media.src, /poster-en\.jpg$/)
-  // Chinese model output on a sample card is placeholder work, so it goes.
-  assert.equal(once.items[0].production, undefined)
-  // Built-in people, angles and rules are translated; user rows are left alone.
-  assert.equal(once.people[0].name, 'Lena, curious beginner')
-  assert.equal(once.people[0].role, 'Target reader')
-  assert.equal(once.angles[0].name, 'Real case')
-  assert.equal(once.skills[0].name, 'Lead with a number')
-  assert.equal(once.skills[0].source, 'Sample')
-  assert.equal(once.people[1].name, '\u6211\u81ea\u5df1\u7684\u4eba\u8bbe')
-  assert.equal(once.styles.find(row => row.id === 'st_mine').name, '\u6211\u7684\u98ce\u683c')
-  // Presets translate per field, so an edited summary survives.
-  const news = once.styles.find(row => row.id === 'preset_news')
-  assert.equal(news.summary, 'My summary')
-  assert.equal(news.name, 'News commentary creator')
-  assert.equal(news.category, 'News')
-  // Compound keys follow the platform rename, so re-importing updates instead of duplicating.
-  assert.equal(once.items[1].externalId, 'RedNote:post1')
-  assert.equal(once.accounts[0].externalId, 'RedNote:u1')
-  assert.equal(once.metrics[0].externalId, 'RedNote:post1')
-  assert.equal(once.styles.find(row => row.id === 'st_mine').accountKey, 'RedNote:u1')
-  const imported = importPosts(once, {
-    account: { platform: 'RedNote', id: 'u1', url: 'https://example.com/u1' },
-    profile: { nickname: 'me', followers: 10, description: 'd' },
-    posts: [{ id: 'post1', title: 'My imported post', body: 'text', publishedAt: '2026-10-01T00:00:00Z', url: 'https://example.com/p1', views: 250, likes: 1, comments: 1, shares: 1, saves: 1 }],
-  })
-  assert.deepEqual(imported, { added: 0, updated: 1 })
-  assert.equal(once.items.filter(row => row.externalId === 'RedNote:post1').length, 1)
-  assert.equal(once.accounts.filter(row => row.externalId === 'RedNote:u1').length, 1)
-  assert.equal(once.metrics.filter(row => row.externalId === 'RedNote:post1').length, 1)
-  assert.equal(once.sampleLang, undefined)
+  const once = migrateState(state)
+  // The 2.x language fields are gone, and an unset active style becomes null.
+  assert.equal('sampleLang' in once, false)
+  assert.equal('otherLang' in once.items[0], false)
+  assert.equal(migrateState({ items: [] }).activeStyleId, null)
+  // The preset template migration still runs: the old template is replaced and
+  // the active style follows it.
+  assert.equal(once.activeStyleId, 'preset_business')
+  assert.equal(once.styles.some(row => row.id.startsWith('seed_style_')), false)
+  assert.equal(once.styles[0].name, 'Mine')
+  assert.equal(once.styles.filter(row => row.preset).length, seed().styles.length)
 
   const snapshot = JSON.stringify(once)
   migrateState(once)

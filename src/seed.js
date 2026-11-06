@@ -4,26 +4,7 @@ import { PRESET_VERSION, migratePresets, seedPresets } from './style-presets.js'
 
 const A = name => `media-desk/assets/${name}`
 
-// Platform names 2.x builds stored in Chinese. Written as escapes so this file
-// stays ASCII-clean while still matching the values already on disk.
-const PLATFORM_ALIASES = {
-  '\u516c\u4f17\u53f7': 'WeChat',
-  '\u5c0f\u7ea2\u4e66': 'RedNote',
-  '\u6296\u97f3': 'Douyin',
-  'B\u7ad9': 'Bilibili',
-  '\u89c6\u9891\u53f7': 'WeChat Channels',
-}
-
-const LEGACY_PRESET_SOURCE = '\u9884\u8bbe'
-const LEGACY_SAMPLE_SOURCE = '\u793a\u4f8b'
-const LEGACY_SAMPLE_ACCOUNT = '\u793a\u4f8b\u8d26\u53f7'
-
 const SAMPLE_ACCOUNT = 'Sample account'
-
-// Full-width punctuation counts too: a Chinese sentence is full of it.
-const CJK = /[\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]/
-
-const hasCjk = value => value !== undefined && CJK.test(JSON.stringify(value))
 
 const RAW = [
   { k: 'image', img: ['hills', 900, 620], t: 'Why your first AI side project never makes a dollar', b: 'It\'s not the prompts. It\'s not knowing what your first sellable thing should look like. Break that step down in three images.', tags: ['AI', 'Monetization'], a: 'case', p: ['newbie'], st: 'draft', day: 0, src: 'Thought on a walk' },
@@ -52,17 +33,6 @@ const RAW = [
   { k: 'image', img: ['night', 720, 900], t: 'City lights at night: 6 moods for long-form images', b: 'A mood board of images that won\'t look like everyone else\'s.', tags: ['Footage'], a: 'list', p: ['creator'], st: 'idea', day: -15, src: 'Mood board' },
   { k: 'image', img: ['blush', 800, 800], t: 'A letter to the anxious beginner', b: 'No tactics. Just what actually happens in your first year.', tags: ['Beginners', 'Empathy'], a: 'story', p: ['newbie'], st: 'outline', day: -16, src: 'Reader letter' },
 ]
-
-/** Sample card text by the id buildSeed assigns, used when upgrading old data. */
-const SEED_TEXT = Object.fromEntries(RAW.map((row, index) => [`seed_${index + 1}`, {
-  title: row.t, body: row.b, tags: row.tags, source: row.src,
-}]))
-
-// Two sample images carry printed text, so they were reprinted in English. The
-// pairs are derived from the seed rows to keep the file names in one place.
-const MEDIA_UPGRADES = Object.fromEntries(RAW
-  .filter(row => row.img?.[0].endsWith('-en'))
-  .map(row => [`${row.img[0].replace(/-en$/, '')}.jpg`, `${row.img[0]}.jpg`]))
 
 const ANGLES = [
   ['case', 'Real case', 'What one person did, and how it went', 'Start from a specific person and specific numbers, then pull out the method.'],
@@ -94,23 +64,6 @@ const ACCOUNTS = [
   ['Douyin', SAMPLE_ACCOUNT, 21300],
   ['Bilibili', SAMPLE_ACCOUNT, 5470],
 ]
-
-// Built-in text by row id, for upgrading rows that are still Chinese. Same
-// values buildSeed writes, so a migrated row matches a fresh install.
-const PEOPLE_TEXT = Object.fromEntries(PEOPLE.map(([id, name, role, note, traits]) => [id, { name, role, note, traits }]))
-const ANGLE_TEXT = Object.fromEntries(ANGLES.map(([id, name, hook, prompt]) => [id, { name, hook, prompt }]))
-const SKILL_TEXT = Object.fromEntries(SKILLS.map(([name, rule, evidence], index) => [`seed_s_${index + 1}`, { name, rule, evidence }]))
-
-// Items, metrics and accounts store the platform as part of a compound key
-// ("RedNote:abc123"). Translating the platform field alone would leave the key
-// pointing at the old name, so re-imports would no longer match existing rows.
-function migrateKey(key) {
-  if (typeof key !== 'string') return key
-  const at = key.indexOf(':')
-  if (at < 0) return key
-  const mapped = PLATFORM_ALIASES[key.slice(0, at)]
-  return mapped ? `${mapped}${key.slice(at)}` : key
-}
 
 function shift(base, days, hour = 10, minute = 0) {
   const d = new Date(base)
@@ -204,76 +157,10 @@ export function buildSeed(now) {
  */
 export function migrateState(state) {
   if (state.activeStyleId === undefined) state.activeStyleId = null
-  upgradeLegacySamples(state)
-  return migratePresets(state)
-}
-
-/**
- * 2.x builds wrote the sample content in Chinese. Swap untouched sample cards
- * for the English seed text, and translate the platform and source values that
- * user content shares with it.
- * @param {object} state - State loaded from disk, edited in place.
- */
-function upgradeLegacySamples(state) {
-  for (const row of state.items ?? []) {
-    if (!row) continue
-    if (row.platform) row.platform = PLATFORM_ALIASES[row.platform] ?? row.platform
-    row.externalId = migrateKey(row.externalId)
-    if (row.source === LEGACY_PRESET_SOURCE) row.source = 'Preset'
-    else if (row.source === LEGACY_SAMPLE_SOURCE) row.source = 'Sample'
-    const seed = row.sample === true ? SEED_TEXT[row.id] : null
-    if (seed) {
-      // Field by field, so an English edit to one field survives the translation
-      // of the others. A sample card the user rewrote entirely is left alone.
-      for (const field of ['title', 'body', 'tags', 'source']) {
-        if (hasCjk(row[field])) row[field] = structuredClone(seed[field])
-      }
-      const legacyImage = row.media?.src?.split('/').pop()
-      if (legacyImage && MEDIA_UPGRADES[legacyImage]) row.media = { ...row.media, src: A(MEDIA_UPGRADES[legacyImage]) }
-      // Model output on a sample card can't be translated field by field, and it
-      // is placeholder work, so drop it rather than leave Chinese in the UI.
-      if (hasCjk(row.production)) delete row.production
-      if (hasCjk(row.drafts)) row.drafts = {}
-    }
-    delete row.otherLang
-  }
-  for (const row of state.people ?? []) {
-    const text = row?.sample === true ? PEOPLE_TEXT[row.id] : null
-    if (!text) continue
-    for (const field of ['name', 'role', 'note', 'traits']) {
-      if (hasCjk(row[field])) row[field] = structuredClone(text[field])
-    }
-  }
-  for (const row of state.angles ?? []) {
-    const text = row?.sample === true ? ANGLE_TEXT[row.id] : null
-    if (!text) continue
-    for (const field of ['name', 'hook', 'prompt']) {
-      if (hasCjk(row[field])) row[field] = structuredClone(text[field])
-    }
-  }
-  for (const row of state.accounts ?? []) {
-    if (!row) continue
-    if (row.platform) row.platform = PLATFORM_ALIASES[row.platform] ?? row.platform
-    row.externalId = migrateKey(row.externalId)
-    if (row.sample === true && row.handle === LEGACY_SAMPLE_ACCOUNT) row.handle = SAMPLE_ACCOUNT
-  }
-  for (const row of state.metrics ?? []) {
-    if (row?.platform) row.platform = PLATFORM_ALIASES[row.platform] ?? row.platform
-    if (row) row.externalId = migrateKey(row.externalId)
-  }
-  for (const row of state.skills ?? []) {
-    if (!row) continue
-    if (row.source === LEGACY_PRESET_SOURCE) row.source = 'Preset'
-    else if (row.source === LEGACY_SAMPLE_SOURCE) row.source = 'Sample'
-    const text = row.sample === true ? SKILL_TEXT[row.id] : null
-    if (text) {
-      for (const field of ['name', 'rule', 'evidence']) {
-        if (hasCjk(row[field])) row[field] = structuredClone(text[field])
-      }
-    }
-  }
-  for (const row of state.styles ?? []) {
-    if (row) row.accountKey = migrateKey(row.accountKey)
-  }
+  // 2.x wrote a sample language and a per-item translation; nothing reads them now.
   delete state.sampleLang
+  for (const row of state.items ?? []) {
+    if (row) delete row.otherLang
+  }
+  return migratePresets(state)
 }
