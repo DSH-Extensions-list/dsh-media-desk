@@ -24,7 +24,7 @@ export function normalizePlan(plan, settings, title) {
   const text = (value, max = 400) => (typeof value === 'string' ? value.trim().slice(0, max) : '')
   const images = (Array.isArray(plan?.images) ? plan.images : []).slice(0, settings.imageCount).map(row => ({ caption: text(row?.caption, 60), anchor: text(row?.anchor, 60), prompt: text(row?.prompt, 1200) })).filter(row => row.prompt)
   const shots = (Array.isArray(plan?.shots) ? plan.shots : []).slice(0, settings.shotCount).map((row, index) => ({
-    no: index + 1, shot: text(row?.shot, 12) || tr('中景'), visual: text(row?.visual, 200), voice: text(row?.voice, 200),
+    no: index + 1, shot: text(row?.shot, 12) || tr('Medium shot'), visual: text(row?.visual, 200), voice: text(row?.voice, 200),
     seconds: Number.isFinite(row?.seconds) ? Math.max(1, Math.min(60, Math.round(row.seconds))) : 5, prompt: text(row?.prompt, 1200),
   })).filter(row => row.prompt || row.visual)
   return {
@@ -70,21 +70,21 @@ export function applyRevision(production, revise, { canDraw = true } = {}) {
   const receipts = []
   const errors = []
   const targets = []
-  const redraw = what => (canDraw ? tr('重画{what}', { what }) : tr('更新了画面描述：{what}（接入生图模型后才会重画）', { what }))
+  const redraw = what => (canDraw ? tr('Redrew {what}', { what }) : tr('Updated the image description for {what} (it will be redrawn once an image model is connected)', { what }))
   const text = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '')
   const title = text(revise?.title, 80)
   if (title && title !== production.title) {
     production.title = title
-    receipts.push(tr('标题改成《{title}》', { title }))
+    receipts.push(tr('Changed the title to "{title}"', { title }))
   }
   const coverText = text(revise?.coverText, 24)
   if (coverText && coverText !== production.coverText) {
     production.coverText = coverText
-    receipts.push(tr('封面大字改成「{text}」', { text: coverText }))
+    receipts.push(tr('Changed the cover text to "{text}"', { text: coverText }))
   }
   if (typeof revise?.article === 'string' && revise.article.trim()) {
     production.article = revise.article.replace(/^\s*#\s+.*\n?/, '').trim().slice(0, 200000)
-    receipts.push(tr('重写了脚本'))
+    receipts.push(tr('Rewrote the script'))
   } else if (Array.isArray(revise?.edits)) {
     let changed = 0
     for (const edit of revise.edits.slice(0, 20)) {
@@ -93,16 +93,16 @@ export function applyRevision(production, revise, { canDraw = true } = {}) {
         production.article = production.article.replace(edit.find, () => edit.replace)
         changed += 1
       } else {
-        errors.push(tr('脚本里没找到「{text}」', { text: edit.find.slice(0, 16) }))
+        errors.push(tr('Couldn\'t find "{text}" in the script', { text: edit.find.slice(0, 16) }))
       }
     }
-    if (changed) receipts.push(tr(changed === 1 ? '改了脚本的 1 处' : '改了脚本的 {n} 处', { n: changed }))
+    if (changed) receipts.push(tr(changed === 1 ? 'Made 1 edit to the script' : 'Made {n} edits to the script', { n: changed }))
   }
   const coverPrompt = text(revise?.cover?.prompt, 1200)
   if (coverPrompt && production.cover) {
     production.cover.prompt = coverPrompt
     targets.push('cover')
-    receipts.push(redraw(tr('封面')))
+    receipts.push(redraw(tr('the cover')))
   }
   for (const row of Array.isArray(revise?.images) ? revise.images.slice(0, 8) : []) {
     const image = production.images?.[Number(row?.no) - 1]
@@ -114,7 +114,7 @@ export function applyRevision(production, revise, { canDraw = true } = {}) {
       image.prompt = prompt
       targets.push(`image:${Number(row.no) - 1}`)
     }
-    receipts.push(prompt ? redraw(tr('配图 {no}', { no: row.no })) : tr('改了配图 {no} 的图注', { no: row.no }))
+    receipts.push(prompt ? redraw(tr('image {no}', { no: row.no })) : tr('Changed the caption of image {no}', { no: row.no }))
   }
   for (const row of Array.isArray(revise?.shots) ? revise.shots.slice(0, 24) : []) {
     const shot = production.shots?.[Number(row?.no) - 1]
@@ -129,7 +129,7 @@ export function applyRevision(production, revise, { canDraw = true } = {}) {
       shot.prompt = prompt
       targets.push(`shot:${Number(row.no) - 1}`)
     }
-    receipts.push(prompt ? redraw(tr('第 {no} 镜', { no: row.no })) : tr('改了第 {no} 镜的文案', { no: row.no }))
+    receipts.push(prompt ? redraw(tr('shot {no}', { no: row.no })) : tr('Changed the text of shot {no}', { no: row.no }))
   }
   return { receipts, errors, targets }
 }
@@ -166,7 +166,7 @@ export class Producer {
   }
 
   patch(id, mutate) {
-    return this.store.mutate('成稿', (state) => {
+    return this.store.mutate('Studio', (state) => {
       const item = state.items.find(row => row.id === id)
       if (item?.production) mutate(item.production, item)
       return state
@@ -177,7 +177,7 @@ export class Producer {
     if (this.jobs.has(id)) return false
     const state = await this.store.read()
     const item = state.items.find(row => row.id === id)
-    if (!item) throw Object.assign(new Error(tr('找不到这条灵感')), { status: 404 })
+    if (!item) throw Object.assign(new Error(tr('Can\'t find this idea')), { status: 404 })
     const job = { stage: 'brief', text: '', planText: '', controller: new AbortController() }
     this.jobs.set(id, job)
     await this.store.mutate('开始成稿', (draft) => {
@@ -244,12 +244,12 @@ export class Producer {
           const result = await this.callText({ ...prompts, maxTokens: 6000, signal: AbortSignal.any([signal, AbortSignal.timeout(TEXT_TIMEOUT_MS)]), onText: (delta) => { job.text += delta } })
           markdown = result.text
           engine = result.model
-          if (!markdown.trim()) throw new Error(tr('模型返回了空内容'))
+          if (!markdown.trim()) throw new Error(tr('The model returned nothing'))
         } catch (err) {
           if (signal.aborted) throw err
           markdown = fallbackArticle(snapshot, item)
           job.text = markdown
-          notice = tr('没有连上文字模型，先给你一份结构草稿。可以到 DeepSeek Harness 设置里检查模型。')
+          notice = tr('No text model is connected, so here\'s an outline to start from. Check the model in DeepSeek Harness settings.')
         }
         const { article } = splitTitle(markdown, plan.title)
         await this.patch(id, (production) => {
@@ -348,13 +348,13 @@ export class Producer {
   /** 单独重画一张。 */
   async regenerate(id, target) {
     const settings = await this.settings.read()
-    if (!imageReady(settings)) throw Object.assign(new Error(tr('还没有接入生图模型')), { status: 400 })
-    if (!parseTarget(target)) throw Object.assign(new Error(tr('目标无效')), { status: 400 })
+    if (!imageReady(settings)) throw Object.assign(new Error(tr('No image model is connected yet')), { status: 400 })
+    if (!parseTarget(target)) throw Object.assign(new Error(tr('Invalid target')), { status: 400 })
     const key = `${id}:${target}`
     if (this.assets.has(key)) return
     const state = await this.store.read()
     const production = state.items.find(row => row.id === id)?.production
-    if (!production || !assetAt(production, target)) throw Object.assign(new Error(tr('找不到这张图')), { status: 404 })
+    if (!production || !assetAt(production, target)) throw Object.assign(new Error(tr('Can\'t find this image')), { status: 404 })
     this.assets.add(key)
     await this.patch(id, (next) => { assetAt(next, target).status = 'running' })
     this.renderAsset(id, target, settings).catch(() => {}).finally(() => this.assets.delete(key))
@@ -377,7 +377,7 @@ export class Producer {
       if (next.status === 'running') {
         next.status = 'failed'
         next.stage = 'done'
-        next.error = tr('上次成稿被中断了，可以重新开始')
+        next.error = tr('The last draft was interrupted. You can start it again.')
       }
       for (const asset of [next.cover, ...next.images ?? [], ...next.shots ?? []]) {
         if (asset && ['pending', 'running'].includes(asset.status)) asset.status = 'idle'

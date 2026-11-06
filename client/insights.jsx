@@ -50,7 +50,7 @@ function TrendChart({ daily: rows, field }) {
   const point = hover === null ? null : daily[hover]
   return (
     <div className="md-chart" ref={box}>
-      <svg width={width} height={height} role="img" aria-label={t(field === 'views' ? '每日播放趋势，共 {n} 天，峰值 {peak}' : '每日互动趋势，共 {n} 天，峰值 {peak}', { n: daily.length, peak: compact(Math.max(...daily.map(d => d.value))) })} onPointerMove={onMove} onPointerLeave={() => setHover(null)}>
+      <svg width={width} height={height} role="img" aria-label={t(field === 'views' ? 'Daily views over {n} days, peak {peak}' : 'Daily engagement over {n} days, peak {peak}', { n: daily.length, peak: compact(Math.max(...daily.map(d => d.value))) })} onPointerMove={onMove} onPointerLeave={() => setHover(null)}>
         {ticks.map(tick => (
           <g key={tick}>
             <line x1={pad.l} x2={width - pad.r} y1={y(tick)} y2={y(tick)} className="md-chart-grid" />
@@ -70,8 +70,8 @@ function TrendChart({ daily: rows, field }) {
       {point ? (
         <div className="md-chart-tip" style={{ left: Math.min(x(hover) + 12, width - 150), top: Math.max(y(point.value) - 56, 0) }}>
           <small>{fmtDate(`${point.date}T12:00:00`)}</small>
-          <b>{field === 'views' ? count(point.value, '1 播放', '{n} 播放') : count(point.value, '1 互动', '{n} 互动')}</b>
-          {field === 'views' ? <small>{count(point.engaged, '1 互动', '{n} 互动')}</small> : null}
+          <b>{field === 'views' ? count(point.value, '1 view', '{n} views') : count(point.value, '1 engagement', '{n} engagements')}</b>
+          {field === 'views' ? <small>{count(point.engaged, '1 engagement', '{n} engagements')}</small> : null}
         </div>
       ) : null}
     </div>
@@ -81,20 +81,20 @@ function TrendChart({ daily: rows, field }) {
 function addMetric(items) {
   setDesk({
     dialog: {
-      title: t('录入一条数据'),
-      initial: { platform: '公众号', date: dayKey(new Date()) },
+      title: t('Add stats'),
+      initial: { platform: 'WeChat', date: dayKey(new Date()) },
       fields: [
-        { name: 'itemId', label: t('对应内容'), type: 'select', options: [{ value: '', label: t('不关联内容') }, ...items.filter(i => !i.parentId).map(i => ({ value: i.id, label: displayItem(i).title.slice(0, 26) }))] },
-        { name: 'platform', label: t('平台'), type: 'select', options: platformChoices().map(v => ({ value: v, label: t(v) })) },
-        { name: 'date', label: t('日期'), type: 'date', required: true },
-        { name: 'views', label: t('播放 / 阅读'), type: 'number', required: true },
-        { name: 'likes', label: t('点赞'), type: 'number' },
-        { name: 'comments', label: t('评论'), type: 'number' },
-        { name: 'saves', label: t('收藏'), type: 'number' },
+        { name: 'itemId', label: t('Piece'), type: 'select', options: [{ value: '', label: t('None') }, ...items.filter(i => !i.parentId).map(i => ({ value: i.id, label: displayItem(i).title.slice(0, 26) }))] },
+        { name: 'platform', label: t('Platform'), type: 'select', options: platformChoices().map(v => ({ value: v, label: t(v) })) },
+        { name: 'date', label: t('Date'), type: 'date', required: true },
+        { name: 'views', label: t('Views / reads'), type: 'number', required: true },
+        { name: 'likes', label: t('Likes'), type: 'number' },
+        { name: 'comments', label: t('Comments'), type: 'number' },
+        { name: 'saves', label: t('Saves'), type: 'number' },
       ],
       onSubmit: (v) => {
         const n = key => Number(v[key]) || 0
-        dispatchOps([{ op: 'add_metric', itemId: v.itemId || null, platform: v.platform, date: new Date(`${v.date}T12:00:00`).toISOString(), views: n('views'), likes: n('likes'), comments: n('comments'), saves: n('saves') }], { label: t('录入数据') })
+        dispatchOps([{ op: 'add_metric', itemId: v.itemId || null, platform: v.platform, date: new Date(`${v.date}T12:00:00`).toISOString(), views: n('views'), likes: n('likes'), comments: n('comments'), saves: n('saves') }], { label: t('Add stats') })
       },
     },
   })
@@ -128,14 +128,14 @@ export function parseCsv(text) {
 function importCsv() {
   setDesk({
     dialog: {
-      title: t('粘贴 CSV 数据'),
-      submitLabel: t('导入'),
-      fields: [{ name: 'csv', label: t('每行一条：日期,平台,阅读,点赞,评论,转发,收藏'), type: 'textarea', rows: 7, required: true, placeholder: t('2026-10-30,公众号,3200,120,18,40,66') }],
+      title: t('Paste CSV'),
+      submitLabel: t('Import'),
+      fields: [{ name: 'csv', label: t('One row per post: date, platform, views, likes, comments, shares, saves'), type: 'textarea', rows: 7, required: true, placeholder: t('2026-10-30,WeChat,3200,120,18,40,66') }],
       onSubmit: (values) => {
         const { ops, errors } = parseCsv(values.csv ?? '')
-        const done = count(ops.length, '导入 1 条数据', '导入 {n} 条数据')
+        const done = count(ops.length, 'Imported 1 row', 'Imported {n} rows')
         if (ops.length) dispatchOps(ops, { label: done, silent: true })
-        toast(errors.length ? t('导入 {n} 条，第 {rows} 行格式不对', { n: ops.length, rows: errors.slice(0, 5).join(t('、')) }) : done, { error: errors.length > 0, undo: !errors.length && ops.length > 0 })
+        toast(errors.length ? t('Imported {n}. Skipped rows with the wrong format: {rows}', { n: ops.length, rows: errors.slice(0, 5).join(t('、')) }) : done, { error: errors.length > 0, undo: !errors.length && ops.length > 0 })
       },
     },
   })
@@ -173,9 +173,9 @@ export function InsightsView() {
   const heroPic = bestItem && posterOf(displayItem(bestItem))
   const actions = (
     <div className="md-hero-actions">
-      <button type="button" className="md-pill is-primary" onClick={() => setConnecting(true)}><Icon name="user" size={14} />{t('导入账号数据')}</button>
-      <button type="button" className="md-pill" onClick={() => addMetric(items)}><Icon name="plus" size={14} />{t('录入数据')}</button>
-      <button type="button" className="md-pill" onClick={importCsv}><Icon name="upload" size={14} />{t('粘贴 CSV')}</button>
+      <button type="button" className="md-pill is-primary" onClick={() => setConnecting(true)}><Icon name="user" size={14} />{t('Import account')}</button>
+      <button type="button" className="md-pill" onClick={() => addMetric(items)}><Icon name="plus" size={14} />{t('Add stats')}</button>
+      <button type="button" className="md-pill" onClick={importCsv}><Icon name="upload" size={14} />{t('Paste CSV')}</button>
     </div>
   )
   if (!metrics.length) {
@@ -183,7 +183,7 @@ export function InsightsView() {
       <div className="md-board-page">
         <section className="md-tile md-i-hero is-empty">
           <div className="md-hero-copy">
-            <h1 className="md-i-line">{t('发布之后，把数据录进来，')}<br />{t('这里就开始替你复盘。')}</h1>
+            <h1 className="md-i-line">{t('Publish something and add its stats,')}<br />{t('and this page turns them into insights.')}</h1>
             {actions}
           </div>
         </section>
@@ -197,29 +197,29 @@ export function InsightsView() {
         <section className="md-tile md-i-hero">
           <div className="md-hero-copy">
             <h1 className="md-i-line">
-              <b>{count(data.published, '1 条内容', '{n} 条内容')}</b> {t('带来了')} <b>{hasViews ? t(plural(data.views, '1 次播放', '{n} 次播放'), { n: compact(data.views) }) : t(plural(data.engaged, '1 次互动', '{n} 次互动'), { n: compact(data.engaged) })}</b>{best ? t('，') : t('。')}
-              {best ? <><br />{t('表现最好的是')} {heroPic ? <img className="md-inline-pic" src={heroPic} alt="" draggable={false} /> : null} <b>{clip(best.title, lang() === 'en' ? 30 : 14)}</b>{t('。')}</> : null}
+              <b>{count(data.published, '1 piece', '{n} piece{s}')}</b> {t('drew')} <b>{hasViews ? t(plural(data.views, '1 view', '{n} views'), { n: compact(data.views) }) : t(plural(data.engaged, '1 engagement', '{n} engagements'), { n: compact(data.engaged) })}</b>{best ? t('，') : t('。')}
+              {best ? <><br />{t('led by')} {heroPic ? <img className="md-inline-pic" src={heroPic} alt="" draggable={false} /> : null} <b>{clip(best.title, lang() === 'en' ? 30 : 14)}</b>{t('。')}</> : null}
             </h1>
             {actions}
           </div>
           <dl className="md-metrics">
-            {hasViews ? <Metric label={t('互动率')} value={(data.engagementRate * 100).toFixed(1)} unit="%" /> : null}
-            <Metric label={t('总互动')} value={compact(data.engaged)} />
-            {realAccounts && data.followers ? <Metric label={t('粉丝')} value={compact(data.followers)} /> : <Metric label={lang() === 'en' ? t('平台（数量）') : '平台'} value={data.platforms.length} unit={t('个')} />}
+            {hasViews ? <Metric label={t('Engagement rate')} value={(data.engagementRate * 100).toFixed(1)} unit="%" /> : null}
+            <Metric label={t('Total engagement')} value={compact(data.engaged)} />
+            {realAccounts && data.followers ? <Metric label={t('Followers')} value={compact(data.followers)} /> : <Metric label={lang() === 'en' ? t('Platforms') : 'Platform'} value={data.platforms.length} unit={t('')} />}
           </dl>
-          {data.hasSample ? <span className="md-i-sample">{t('示例数据')}</span> : null}
+          {data.hasSample ? <span className="md-i-sample">{t('Sample data')}</span> : null}
         </section>
 
         <section className="md-tile md-i-trend">
           <header className="md-tile-head">
-            <h2>{hasViews ? t('每日播放') : t('每日互动')}</h2>
+            <h2>{hasViews ? t('Daily views') : t('Daily engagement')}</h2>
             <span className="md-grow" />
-            <Segmented label={t('显示方式')} value={show} onChange={setShow} options={[{ value: 'chart', label: t('图') }, { value: 'table', label: t('表') }]} />
+            <Segmented label={t('View')} value={show} onChange={setShow} options={[{ value: 'chart', label: t('Chart') }, { value: 'table', label: t('Table') }]} />
           </header>
           {show === 'chart' ? <div className="md-i-chart"><TrendChart daily={data.daily} field={hasViews ? 'views' : 'engaged'} /></div> : (
             <div className="md-i-table">
               <table className="md-table is-plain">
-                <thead><tr><th>{t('日期')}</th>{hasViews ? <th className="is-num">{t('播放')}</th> : null}<th className="is-num">{t('互动')}</th></tr></thead>
+                <thead><tr><th>{t('Date')}</th>{hasViews ? <th className="is-num">{t('Views')}</th> : null}<th className="is-num">{t('Engagement')}</th></tr></thead>
                 <tbody>{[...data.daily].reverse().map(d => <tr key={d.date}><td>{lang() === 'en' ? fmtDate(`${d.date}T12:00:00`) : d.date}</td>{hasViews ? <td className="is-num">{d.views.toLocaleString()}</td> : null}<td className="is-num">{d.engaged.toLocaleString()}</td></tr>)}</tbody>
               </table>
             </div>
@@ -227,10 +227,10 @@ export function InsightsView() {
         </section>
 
         <section className="md-tile md-i-platforms">
-          <header className="md-tile-head"><h2>{t('平台分布')}</h2><span className="md-tile-meta">{barKey === 'views' ? t('播放') : t('互动')}</span></header>
-          <ul className="md-bars" aria-label={barKey === 'views' ? t('各平台播放') : t('各平台互动')}>
+          <header className="md-tile-head"><h2>{t('By platform')}</h2><span className="md-tile-meta">{barKey === 'views' ? t('Views') : t('Engagement')}</span></header>
+          <ul className="md-bars" aria-label={barKey === 'views' ? t('Views by platform') : t('Engagement by platform')}>
             {data.platforms.map(platform => (
-              <li key={platform.platform} title={t(platform.views ? '{platform}：{views} 播放，{likes} 赞，{saves} 收藏' : '{platform}：{likes} 赞，{saves} 收藏', { platform: t(platform.platform), views: platform.views.toLocaleString(), likes: platform.likes.toLocaleString(), saves: platform.saves.toLocaleString() })}>
+              <li key={platform.platform} title={t(platform.views ? '{platform}: {views} views, {likes} likes, {saves} saves' : '{platform}: {likes} likes, {saves} saves', { platform: t(platform.platform), views: platform.views.toLocaleString(), likes: platform.likes.toLocaleString(), saves: platform.saves.toLocaleString() })}>
                 <span>{t(platform.platform)}</span>
                 <b>{compact(platform[barKey])}</b>
                 <span className="md-bar-track"><i style={{ width: `${(platform[barKey] / maxBar) * 100}%` }} /></span>
@@ -240,7 +240,7 @@ export function InsightsView() {
         </section>
 
         <section className="md-tile md-i-top">
-          <header className="md-tile-head"><h2>{t('表现最好的内容')}</h2></header>
+          <header className="md-tile-head"><h2>{t('Top pieces')}</h2></header>
           <ol className="md-top">
             {data.top.slice(0, 5).map((row, index) => {
               const item = items.find(i => i.id === row.id)
@@ -250,8 +250,8 @@ export function InsightsView() {
                   <button type="button" onClick={() => openItem(row.id)}>
                     <span className="md-top-rank">{index + 1}</span>
                     <span className="md-thumb">{poster ? <img src={poster} alt="" loading="lazy" /> : null}</span>
-                    <span className="md-top-title"><strong>{row.title}</strong><small>{t(row.platform)} · {t('{likes} 赞 · {saves} 收藏', { likes: compact(row.likes), saves: compact(row.saves) })}</small></span>
-                    <b>{row.views ? compact(row.views) : t(plural(row.engaged, '1 互动', '{n} 互动'), { n: compact(row.engaged) })}</b>
+                    <span className="md-top-title"><strong>{row.title}</strong><small>{t(row.platform)} · {t('{likes} likes · {saves} saves', { likes: compact(row.likes), saves: compact(row.saves) })}</small></span>
+                    <b>{row.views ? compact(row.views) : t(plural(row.engaged, '1 engagement', '{n} engagements'), { n: compact(row.engaged) })}</b>
                   </button>
                 </li>
               )
@@ -261,18 +261,18 @@ export function InsightsView() {
 
         <section className="md-tile md-i-advice">
           <header className="md-tile-head">
-            <h2>{t('给你的建议')}</h2>
+            <h2>{t('Suggestions')}</h2>
             <span className="md-grow" />
-            <button type="button" className="md-pill is-small" onClick={learnSkills}><Icon name="spark" size={13} />{t('重新分析')}</button>
+            <button type="button" className="md-pill is-small" onClick={learnSkills}><Icon name="spark" size={13} />{t('Analyze again')}</button>
           </header>
           <div className="md-i-advice-list">
             {proposed.length ? proposed.slice(0, 4).map(skill => (
               <div key={skill.id} className="md-i-tip">
                 <strong>{skill.name}</strong>
                 <p>{skill.evidence ?? skill.rule}</p>
-                <button type="button" className="md-pill is-small" onClick={() => dispatchOps([{ op: 'update_skill', id: skill.id, status: 'active' }], { label: t('启用规则「{name}」', { name: skill.name }) })}>{t('写进规则')}</button>
+                <button type="button" className="md-pill is-small" onClick={() => dispatchOps([{ op: 'update_skill', id: skill.id, status: 'active' }], { label: t('Turn on rule “{name}”', { name: skill.name }) })}>{t('Add to rules')}</button>
               </div>
-            )) : <p className="md-muted">{t('点「重新分析」，从现有数据里找出值得坚持的做法。')}</p>}
+            )) : <p className="md-muted">{t('Click Analyze again to find what’s working in your data.')}</p>}
           </div>
         </section>
       </div>

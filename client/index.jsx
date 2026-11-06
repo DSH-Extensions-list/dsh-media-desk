@@ -17,11 +17,11 @@ const PANEL_ID = 'media-desk'
 
 // navKey：同一个中文在别处意思不同（单数的“灵感”“风格”），英文导航另查一条
 const NAV = [
-  { id: 'home', label: '灵感', navKey: '灵感（导航）' },
-  { id: 'content', label: '内容' },
-  { id: 'schedule', label: '排期' },
-  { id: 'insights', label: '复盘' },
-  { id: 'style', label: '风格', navKey: '风格（导航）' },
+  { id: 'home', label: 'Idea', navKey: 'Ideas' },
+  { id: 'content', label: 'Content' },
+  { id: 'schedule', label: 'Schedule' },
+  { id: 'insights', label: 'Insights' },
+  { id: 'style', label: 'Style', navKey: 'Styles' },
 ]
 
 const VIEWS = { home: HomeView, content: ContentView, schedule: ScheduleView, insights: InsightsView, style: StyleView }
@@ -50,43 +50,43 @@ function CaptureDialog() {
     } else if (tab === 'quote' || tab === 'text') {
       const value = text.trim()
       if (value) {
-        await dispatchOps([{ op: 'add_item', kind: tab === 'quote' ? 'quote' : 'note', title: tab === 'quote' ? value : value.split(/[。！？\n]|[.!?](?=\s|$)/)[0].slice(0, 40), body: tab === 'quote' ? '' : value }], { label: t('记下灵感') })
+        await dispatchOps([{ op: 'add_item', kind: tab === 'quote' ? 'quote' : 'note', title: tab === 'quote' ? value : value.split(/[。！？\n]|[.!?](?=\s|$)/)[0].slice(0, 40), body: tab === 'quote' ? '' : value }], { label: t('Add idea') })
         close()
       }
     }
     setBusy(false)
   }
-  const tabs = [['text', t('笔记')], ['quote', t('金句')], ['link', t('链接')], ['file', t('图片/视频')]]
+  const tabs = [['text', t('Note')], ['quote', t('Quote')], ['link', t('Link')], ['file', t('Image/video')]]
   return (
-    <Dialog title={t('记下一个灵感')} onClose={close} width={480}>
+    <Dialog title={t('New idea')} onClose={close} width={480}>
       <div className="md-capture-tabs" role="tablist">
         {tabs.map(([id, label]) => <button type="button" role="tab" key={id} aria-selected={tab === id} className={tab === id ? 'is-on' : ''} onClick={() => setTab(id)}>{label}</button>)}
       </div>
       <form className="md-form" onSubmit={save}>
         {tab === 'link' ? (
           <label className="md-field">
-            <span>{t('链接')}</span>
+            <span>{t('Link')}</span>
             <input type="url" required value={url} onChange={e => setUrl(e.target.value)} placeholder="https://" />
-            <small>{t('会自动读取页面的标题、简介和封面。')}</small>
+            <small>{t('We’ll pull in the page title, summary and cover.')}</small>
           </label>
         ) : tab === 'file' ? (
           <button type="button" className="md-dropzone" onClick={() => fileInput.current?.click()}>
             <Icon name="upload" size={22} />
-            <span>{t('选择图片或视频')}</span>
-            <small>{t('也可以直接把文件拖到灵感墙上')}</small>
+            <span>{t('Choose images or videos')}</span>
+            <small>{t('Or drag files onto the idea wall')}</small>
             <input ref={fileInput} type="file" hidden multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime" onChange={async (e) => { const files = [...e.target.files]; close(); await captureFiles(files) }} />
           </button>
         ) : (
           <label className="md-field">
-            <span>{tab === 'quote' ? t('这句话') : t('想法')}</span>
-            <textarea rows={4} required value={text} onChange={e => setText(e.target.value)} placeholder={tab === 'quote' ? t('好的选题不是想出来的……') : t('想到什么就写什么，之后再让助手补全。')} />
+            <span>{tab === 'quote' ? t('Quote') : t('Idea')}</span>
+            <textarea rows={4} required value={text} onChange={e => setText(e.target.value)} placeholder={tab === 'quote' ? t('The best topics aren’t invented. They’re noticed…') : t('Write whatever comes to mind. The assistant can fill in the rest.')} />
           </label>
         )}
         {tab === 'file' ? null : (
           <div className="md-form-foot">
             <span style={{ flex: 1 }} />
-            <button type="button" className="md-btn" onClick={close}>{t('取消')}</button>
-            <button type="submit" className="md-btn is-primary" disabled={busy}>{busy ? t('保存中…') : t('放到灵感墙')}</button>
+            <button type="button" className="md-btn" onClick={close}>{t('Cancel')}</button>
+            <button type="submit" className="md-btn is-primary" disabled={busy}>{busy ? t('Saving…') : t('Add to wall')}</button>
           </div>
         )}
       </form>
@@ -98,14 +98,14 @@ function SampleBadge() {
   const hasSample = useDesk(s => s.state.items.some(i => i.sample))
   if (!hasSample) return null
   return (
-    <button type="button" className="md-sample" title={t('现在看到的内容都是示例，可以一键清空')} onClick={() => setDesk({
+    <button type="button" className="md-sample" title={t('You’re looking at sample data. Clear it whenever you’re ready.')} onClick={() => setDesk({
       dialog: {
-        title: t('清空示例数据'),
-        submitLabel: t('清空'),
+        title: t('Clear sample data'),
+        submitLabel: t('Clear'),
         fields: [],
-        onSubmit: () => dispatchOps([{ op: 'clear_samples' }], { label: t('清空示例数据') }),
+        onSubmit: () => dispatchOps([{ op: 'clear_samples' }], { label: t('Clear sample data') }),
       },
-    })}>{t('示例数据 · 清空')}</button>
+    })}>{t('Clear sample data')}</button>
   )
 }
 
@@ -155,21 +155,21 @@ function Desk() {
       <div className="md-ambient" aria-hidden="true"><i /><i /><i /></div>
       <div className="md-main">
         <header className="md-topbar" data-window-drag="">
-          <nav className="md-nav" aria-label={t('工作台导航')}>
+          <nav className="md-nav" aria-label={t('Desk navigation')}>
             {NAV.map(entry => (
               <button type="button" key={entry.id} className={view === entry.id ? 'is-on' : ''} aria-current={view === entry.id ? 'page' : undefined} onClick={() => setDesk({ view: entry.id, focusId: null })}>{entry.navKey && lang() === 'en' ? t(entry.navKey) : t(entry.label)}</button>
             ))}
           </nav>
           <span style={{ flex: 1 }} />
           {ready ? <SampleBadge /> : null}
-          {canUndo ? <IconButton icon="undo" label={t('撤销上一步')} onClick={undo} /> : null}
-          <IconButton icon="gear" label={t('设置')} onClick={() => setDesk({ settingsOpen: true })} />
-          {showDock ? null : <button type="button" className="md-open-dock" onClick={() => setDesk({ dockOpen: true })}><Icon name="chat" size={15} />{t('助手')}</button>}
+          {canUndo ? <IconButton icon="undo" label={t('Undo')} onClick={undo} /> : null}
+          <IconButton icon="gear" label={t('Settings')} onClick={() => setDesk({ settingsOpen: true })} />
+          {showDock ? null : <button type="button" className="md-open-dock" onClick={() => setDesk({ dockOpen: true })}><Icon name="chat" size={15} />{t('Assistant')}</button>}
         </header>
         <main className="md-content" key={view}>
           {error ? (
-            <div className="md-page"><p className="md-muted">{t('工作台加载失败：{error}', { error })}</p><button type="button" className="md-btn" onClick={loadDesk}>{t('重试')}</button></div>
-          ) : ready ? <Active /> : <div className="md-loading"><span className="md-shimmer">{t('正在铺开灵感…')}</span></div>}
+            <div className="md-page"><p className="md-muted">{t('Couldn’t load Media Desk: {error}', { error })}</p><button type="button" className="md-btn" onClick={loadDesk}>{t('Retry')}</button></div>
+          ) : ready ? <Active /> : <div className="md-loading"><span className="md-shimmer">{t('Loading your ideas…')}</span></div>}
         </main>
         {ready ? <Studio /> : null}
       </div>
@@ -199,7 +199,7 @@ export function apply(ctx) {
         name: 'sidebar.panellist',
         id: PANEL_ID,
         order: 5,
-        label: () => t('自媒体工作台'),
+        label: () => t('Media Desk'),
       }, PanelIcon))
     }
     mount()

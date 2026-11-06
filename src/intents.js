@@ -7,7 +7,7 @@ const STATUS_WORDS = { 灵感: 'idea', 大纲: 'outline', 草稿: 'draft', 待�
 const CN_DIGIT = { 一: 1, 两: 2, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10, 十一: 11, 十二: 12 }
 const WEEK_EN = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 }
 const MONTH_EN = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
-const PLATFORM_WORDS = { 'wechat channels': '视频号', wechat: '公众号', xiaohongshu: '小红书', rednote: '小红书', douyin: '抖音', bilibili: 'B站', channels: '视频号', tiktok: 'TikTok', instagram: 'Instagram', ig: 'Instagram', youtube: 'YouTube', twitter: 'X' }
+const PLATFORM_WORDS = { 'wechat channels': 'WeChat Channels', wechat: 'WeChat', xiaohongshu: 'RedNote', rednote: 'RedNote', douyin: 'Douyin', bilibili: 'Bilibili', channels: 'WeChat Channels', tiktok: 'TikTok', instagram: 'Instagram', ig: 'Instagram', youtube: 'YouTube', twitter: 'X' }
 
 /** 英文里的日期时间：tomorrow 8pm、next wed、Nov 3 20:00、in 3 days。 */
 function parseWhenEn(text, now) {
@@ -160,8 +160,8 @@ function agenda(state, now) {
     .filter(i => i.scheduledAt && new Date(i.scheduledAt) >= now && i.status !== 'published')
     .sort((a, b) => Date.parse(a.scheduledAt) - Date.parse(b.scheduledAt))
     .slice(0, 5)
-  if (!upcoming.length) return tr('接下来没有排期的内容。')
-  return `${tr('接下来的排期：')}\n${upcoming.map(i => `· ${fmtWhen(i.scheduledAt)} ${platformName(i.platform) ?? ''} ${tr('《{title}》', { title: i.title })}`).join('\n')}`
+  if (!upcoming.length) return tr('Nothing is scheduled yet.')
+  return `${tr('Coming up:')}\n${upcoming.map(i => `· ${fmtWhen(i.scheduledAt)} ${platformName(i.platform) ?? ''} ${tr('《{title}》', { title: i.title })}`).join('\n')}`
 }
 
 /**
@@ -181,13 +181,13 @@ export function localIntent(state, message, { focusId, now = new Date() } = {}) 
   m = /^(?:帮我)?(?:记一下|记下来|记下|记个|记|存一下|存|收藏|新灵感|加一个灵感|加个灵感|灵感)[：:，,\s]*(.+)$/s.exec(text)
     ?? /^(?:note|jot(?: down)?|save|new idea|add (?:an )?idea|idea)\s*[:：,-]\s*(.+)$/is.exec(text)
   if (m) {
-    return { reply: tr('记下了，已经放到灵感墙上。'), ops: [{ op: 'add_item', kind: 'note', body: m[1].trim(), title: m[1].trim().split(/[。！？\n]|[.!?](?:\s|$)/)[0].slice(0, 40) }] }
+    return { reply: tr('Saved. It\'s on the idea wall.'), ops: [{ op: 'add_item', kind: 'note', body: m[1].trim(), title: m[1].trim().split(/[。！？\n]|[.!?](?:\s|$)/)[0].slice(0, 40) }] }
   }
   const ruleZh = /(?:以后|今后|记住|标准|规则)[：:，,\s]*(.+)$/.exec(text)
   m = (ruleZh && !/排|改成/.test(text) ? ruleZh : null)
     ?? /^(?:from now on|going forward|always|rule|remember)\s*[:：,-]?\s+(.+)$/is.exec(text)
   if (m) {
-    return { reply: tr('记住了，先作为待确认的规则放进 Skills。'), ops: [{ op: 'add_skill', name: m[1].trim().slice(0, 18), rule: m[1].trim(), source: tr('对话'), status: 'proposed', confidence: 0.6 }] }
+    return { reply: tr('Got it. I added it as a writing rule for you to review.'), ops: [{ op: 'add_skill', name: m[1].trim().slice(0, 18), rule: m[1].trim(), source: tr('Chat'), status: 'proposed', confidence: 0.6 }] }
   }
 
   const item = resolveItem(state, text, focusId)
@@ -195,35 +195,35 @@ export function localIntent(state, message, { focusId, now = new Date() } = {}) 
   // 英文的 move/set 也可能是改状态，带上能认出的时间才算排期
   if (/排到|排在|安排到|改到|挪到|放到|发布时间|定在/.test(text) || /^schedule\b/i.test(text) || (/^(?:move|put|set|publish|post)\b/i.test(text) && parseWhen(text, now))) {
     const when = parseWhen(text, now)
-    if (!when) return { reply: tr('没听出具体时间，可以说「明晚 8 点」或「11月3日 20:00」。'), ops: [] }
-    if (!item) return { reply: tr('没找到要排期的内容，可以用《标题》告诉我是哪一篇。'), ops: [] }
+    if (!when) return { reply: tr('I couldn\'t find a time. Try "tomorrow 8pm" or "Nov 3 20:00".'), ops: [] }
+    if (!item) return { reply: tr('Which piece should I schedule? Put its title in quotes.'), ops: [] }
     const word = /\b(wechat channels|wechat|xiaohongshu|rednote|douyin|bilibili|channels|tiktok|instagram|ig|youtube|twitter)\b/i.exec(text)?.[1]?.replace(/\s+/g, ' ')
-    const platform = word ? PLATFORM_WORDS[word.toLowerCase()] : ['公众号', '小红书', '抖音', 'B站', '视频号', 'TikTok', 'Instagram', 'YouTube', 'X'].find(p => p.length > 1 && text.toLowerCase().includes(p.toLowerCase())) ?? (/\bon X\b/.test(text) ? 'X' : undefined)
-    return { reply: tr('排好了。'), ops: [{ op: 'schedule_item', id: item.id, scheduledAt: when.toISOString(), ...(platform ? { platform } : {}) }] }
+    const platform = word ? PLATFORM_WORDS[word.toLowerCase()] : ['WeChat', 'RedNote', 'Douyin', 'Bilibili', 'WeChat Channels', 'TikTok', 'Instagram', 'YouTube', 'X'].find(p => p.length > 1 && text.toLowerCase().includes(p.toLowerCase())) ?? (/\bon X\b/.test(text) ? 'X' : undefined)
+    return { reply: tr('Scheduled.'), ops: [{ op: 'schedule_item', id: item.id, scheduledAt: when.toISOString(), ...(platform ? { platform } : {}) }] }
   }
   if (/写成|成文|成稿|写一篇|生成文章|生成脚本|成脚本|写脚本|分镜|配图/.test(text) || /\b(?:write|turn|make|produce|draft)\b.*\b(?:script|article|post|storyboard|figures?)\b|^(?:produce|write)(?: it| this)?\b|\bstoryboard\b/i.test(text)) {
-    if (!item) return { reply: tr('告诉我要写哪一条，比如：把《标题》成稿。'), ops: [] }
-    return { reply: tr('开始做《{title}》。', { title: item.title }), ops: [], actions: [{ type: 'produce', id: item.id }] }
+    if (!item) return { reply: tr('Which idea should I draft? For example: write "Title".'), ops: [] }
+    return { reply: tr('Drafting "{title}".', { title: item.title }), ops: [], actions: [{ type: 'produce', id: item.id }] }
   }
   const EN_STATUS = /\b(?:mark|set|change|move)\b.*\b(?:as|to)\s+(?:an?\s+)?(idea|outline|draft|ready|published)\b/i.exec(text)
   if ((m = /(?:状态)?(?:改成|改为|标记为|设为|变成)\s*(灵感|大纲|草稿|待发布|已发布)/.exec(text)) || EN_STATUS) {
-    if (!item) return { reply: tr('没找到这篇内容，可以用《标题》告诉我。'), ops: [] }
-    return { reply: tr('改好了。'), ops: [{ op: 'set_status', id: item.id, status: m ? STATUS_WORDS[m[1]] : EN_STATUS[1].toLowerCase() }] }
+    if (!item) return { reply: tr('I couldn\'t find that piece. Put its title in quotes.'), ops: [] }
+    return { reply: tr('Done.'), ops: [{ op: 'set_status', id: item.id, status: m ? STATUS_WORDS[m[1]] : EN_STATUS[1].toLowerCase() }] }
   }
   if ((m = /(?:标题)?(?:改成|改为)[《「“"]?([^》」”"]+)[》」”"]?$/.exec(text)) && item) {
-    return { reply: tr('改好了。'), ops: [{ op: 'update_item', id: item.id, title: m[1].trim() }] }
+    return { reply: tr('Done.'), ops: [{ op: 'update_item', id: item.id, title: m[1].trim() }] }
   }
   // 英文里引号包的是新标题，不是要改的那篇，所以优先用当前选中的
   if ((m = /^(?:rename|retitle)(?:\s+(?:it|this))?(?:\s+to)?\s*[“"]?([^”"]+?)[”"]?$|\btitle to\s*[“"]?([^”"]+?)[”"]?$/i.exec(text))) {
     const target = (focusId ? state.items.find(i => i.id === focusId) : null) ?? item
-    if (target) return { reply: tr('改好了。'), ops: [{ op: 'update_item', id: target.id, title: (m[1] ?? m[2]).trim() }] }
+    if (target) return { reply: tr('Done.'), ops: [{ op: 'update_item', id: target.id, title: (m[1] ?? m[2]).trim() }] }
   }
   if ((/删除|删掉/.test(text) || /^(?:delete|remove)\b/i.test(text)) && item) {
-    return { reply: tr('删掉了，可以随时撤销。'), ops: [{ op: 'delete_item', id: item.id }] }
+    return { reply: tr('Deleted. You can undo it anytime.'), ops: [{ op: 'delete_item', id: item.id }] }
   }
   const counts = STATUSES.map(s => state.items.filter(i => i.status === s).length)
   return {
-    reply: tr('这句话我用本地规则没听懂。现在有 {ideas} 个灵感、{drafts} 篇草稿。连接模型后可以处理任意说法；现在可以试试「记一下：……」「把《标题》排到明晚 8 点」「把《标题》成稿」。', { ideas: counts[0], drafts: counts[2] }),
+    reply: tr('Local rules couldn\'t handle that (ideas: {ideas}, drafts: {drafts}). Connect a model and you can say anything. For now, try: note: ... / schedule "Title" for tomorrow 8pm / write "Title".', { ideas: counts[0], drafts: counts[2] }),
     ops: [],
   }
 }

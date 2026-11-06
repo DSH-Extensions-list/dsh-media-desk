@@ -27,11 +27,11 @@ function isPrivateAddress(address) {
 /** 粘贴的链接可能来自任何地方，不能让它访问本机或内网服务。 */
 export async function assertPublicUrl(raw) {
   const url = new URL(raw)
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error(tr('只支持 http 和 https 链接'))
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error(tr('Only http and https links are supported'))
   const host = url.hostname.replace(/^\[|\]$/g, '')
-  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) throw new Error(tr('不能抓取本机地址'))
+  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) throw new Error(tr('Can\'t fetch addresses on this machine'))
   const records = isIP(host) ? [{ address: host }] : await lookup(host, { all: true })
-  if (records.some(record => isPrivateAddress(record.address))) throw new Error(tr('不能抓取内网地址'))
+  if (records.some(record => isPrivateAddress(record.address))) throw new Error(tr('Can\'t fetch private network addresses'))
   return url
 }
 
@@ -76,14 +76,14 @@ async function fetchPublic(raw, fetchImpl) {
     }
     return { res, url }
   }
-  throw new Error(tr('跳转次数过多'))
+  throw new Error(tr('Too many redirects'))
 }
 
 async function readHtml(raw, fetchImpl) {
   const { res, url } = await fetchPublic(raw, fetchImpl)
-  if (!res.ok) throw new Error(tr('页面返回 {status}，可能需要登录或被平台拦截', { status: res.status }))
+  if (!res.ok) throw new Error(tr('The page returned {status}. It may need a login or be blocked by the platform.', { status: res.status }))
   const type = res.headers.get('content-type') || ''
-  if (!/html|xml/i.test(type)) throw new Error(tr('这不是网页（{type}）', { type: type || tr('未知类型') }))
+  if (!/html|xml/i.test(type)) throw new Error(tr('This isn\'t a web page ({type})', { type: type || tr('unknown type') }))
   const reader = res.body.getReader()
   const chunks = []
   let size = 0

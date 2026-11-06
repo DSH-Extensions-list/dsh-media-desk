@@ -3,15 +3,15 @@ import { lang, t } from './i18n.js'
 
 // 这些表只放中文原文，显示时再用 t() 翻译
 export const STATUSES = ['idea', 'outline', 'draft', 'ready', 'published']
-export const STATUS_LABEL = { idea: '灵感', outline: '大纲', draft: '草稿', ready: '待发布', published: '已发布' }
-export const KIND_LABEL = { image: '图片', video: '视频', web: '网页', quote: '金句', note: '笔记' }
-export const PLATFORMS = ['公众号', '小红书', '抖音', 'B站', '视频号', 'TikTok', 'Instagram', 'YouTube', 'X']
+export const STATUS_LABEL = { idea: 'Idea', outline: 'Outline', draft: 'Draft', ready: 'Ready', published: 'Published' }
+export const KIND_LABEL = { image: 'Image', video: 'Video', web: 'Web', quote: 'Quote', note: 'Note' }
+export const PLATFORMS = ['WeChat', 'RedNote', 'Douyin', 'Bilibili', 'WeChat Channels', 'TikTok', 'Instagram', 'YouTube', 'X']
 const OVERSEAS = new Set(['TikTok', 'Instagram', 'YouTube', 'X'])
 /** 下拉框里的平台顺序：英文界面把海外平台放前面。 */
 export function platformChoices() {
   return lang() === 'en' ? [...PLATFORMS.filter(p => OVERSEAS.has(p)), ...PLATFORMS.filter(p => !OVERSEAS.has(p))] : PLATFORMS
 }
-export const STYLE_CATEGORIES = ['科技数码', '旅行探店', 'Vlog 生活', '观点认知', '干货教程', '种草测评', '情感故事', '热点资讯']
+export const STYLE_CATEGORIES = ['Tech', 'Travel & food', 'Lifestyle', 'Opinion', 'Tutorials', 'Reviews', 'Stories', 'News']
 
 export function styleIcon(style) {
   return style?.icon || '✍️'
@@ -83,17 +83,17 @@ export function fmtDate(iso) {
 }
 
 export function fmtWhen(iso) {
-  if (!iso) return t('未排期')
+  if (!iso) return t('Not scheduled')
   return `${fmtDate(iso)} ${fmtTime(iso)}`
 }
 
 export function relativeDay(iso) {
   const diff = Math.round((new Date(dayKey(iso)) - new Date(dayKey(new Date()))) / 86400000)
-  if (diff === 0) return t('今天')
-  if (diff === 1) return t('明天')
-  if (diff === 2) return t('后天')
-  if (diff === -1) return t('昨天')
-  if (diff < 0 && diff > -8) return t('{n}天前', { n: -diff })
+  if (diff === 0) return t('Today')
+  if (diff === 1) return t('Tomorrow')
+  if (diff === 2) return t('In 2 days')
+  if (diff === -1) return t('Yesterday')
+  if (diff < 0 && diff > -8) return t('{n} days ago', { n: -diff })
   return fmtDate(iso)
 }
 

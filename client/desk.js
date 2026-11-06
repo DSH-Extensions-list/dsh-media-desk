@@ -35,7 +35,7 @@ async function request(path, body) {
     method: 'POST', headers: { 'content-type': 'application/json', 'x-media-desk-lang': lang() }, body: JSON.stringify(body),
   })
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.error || t('请求失败（{status}）', { status: res.status }))
+  if (!res.ok) throw new Error(data.error || t('Request failed ({status})', { status: res.status }))
   return data
 }
 
@@ -62,7 +62,7 @@ export async function loadDesk() {
   }
 }
 
-export async function dispatchOps(ops, { label = t('操作'), undoable = true, silent = false } = {}) {
+export async function dispatchOps(ops, { label = t('Action'), undoable = true, silent = false } = {}) {
   try {
     const data = await request('ops', { ops, label, undoable })
     setDesk({ state: data.state, canUndo: undoable || snapshot.canUndo })
@@ -79,7 +79,7 @@ export async function undo() {
   try {
     const data = await request('undo', {})
     setDesk({ state: data.state, canUndo: data.canUndo, toast: null })
-    if (data.label) toast(t('已撤销：{label}', { label: data.label }))
+    if (data.label) toast(t('Undone: {label}', { label: data.label }))
   } catch (err) {
     report(err)
   }
@@ -149,7 +149,7 @@ export async function saveSettings(payload) {
     const settings = await request('settings', payload)
     setLanguagePreference(settings.language)
     setDesk({ settings })
-    toast(t('设置已保存'))
+    toast(t('Settings saved'))
     return true
   } catch (err) {
     report(err)
@@ -184,7 +184,7 @@ function runActions(actions) {
 export async function sendChat(text) {
   const { chatQuote: quote, focusId } = snapshot
   // 选中的段落或某一镜，随消息一起交给模型
-  const message = quote ? (quote.text ? t('关于{label}「{quote}」：{text}', { label: quote.label, quote: quote.text, text }) : t('关于{label}：{text}', { label: quote.label, text })) : text
+  const message = quote ? (quote.text ? t('About {label} “{quote}”: {text}', { label: quote.label, quote: quote.text, text }) : t('About {label}: {text}', { label: quote.label, text })) : text
   setDesk(s => ({
     thinking: true,
     chatQuote: null,
@@ -209,7 +209,7 @@ export async function saveProduced(id) {
     const videoCover = await coverDataUrl({ src: production.cover?.src, text: production.coverText || production.title }).catch(() => undefined)
     const data = await request('produce/save', { id, videoCover })
     setDesk({ state: data.state })
-    toast(t('已保存到 {path}', { path: data.path }))
+    toast(t('Saved to {path}', { path: data.path }))
   } catch (err) {
     report(err)
   }
@@ -236,7 +236,7 @@ export async function captureUrl(url, extra = {}) {
   try {
     const data = await request('capture-url', { url, ...extra })
     setDesk({ state: data.state, canUndo: true })
-    toast(t('已收藏到灵感墙'), { undo: true })
+    toast(t('Saved to the idea wall'), { undo: true })
     return data.id
   } catch (err) {
     report(err)
@@ -247,7 +247,7 @@ export async function captureUrl(url, extra = {}) {
 export async function uploadFile(file) {
   const res = await fetch(`${BASE}upload`, { method: 'POST', headers: { 'content-type': file.type, 'x-media-desk-lang': lang() }, body: file })
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.error || t('上传失败'))
+  if (!res.ok) throw new Error(data.error || t('Upload failed'))
   return data
 }
 
@@ -256,8 +256,8 @@ export async function captureFiles(files) {
     try {
       const { src, kind } = await uploadFile(file)
       const title = file.name.replace(/\.[^.]+$/, '')
-      await dispatchOps([{ op: 'add_item', kind, title, media: { src } }], { label: t('收藏 {title}', { title }), silent: true })
-      toast(t('已放到灵感墙'), { undo: true })
+      await dispatchOps([{ op: 'add_item', kind, title, media: { src } }], { label: t('Save {title}', { title }), silent: true })
+      toast(t('Added to the idea wall'), { undo: true })
     } catch (err) {
       report(err)
     }
@@ -268,8 +268,8 @@ export async function refreshAccount(payload) {
   try {
     const data = await request('account/refresh', payload)
     setDesk({ state: data.state, canUndo: true })
-    if (data.fetchError) toast(t('读取主页失败：{error}', { error: data.fetchError }), { error: true })
-    else toast(t('已更新账号档案'))
+    if (data.fetchError) toast(t('Couldn’t read the profile: {error}', { error: data.fetchError }), { error: true })
+    else toast(t('Account profile updated'))
     return data
   } catch (err) {
     report(err)
@@ -282,7 +282,7 @@ export async function extractStyle(payload) {
     const data = await request('style/extract', payload)
     setDesk({ state: data.state, canUndo: true })
     const missed = data.failures?.length ?? 0
-    toast(missed ? t(plural(missed, '风格提炼好了，有 1 个链接没抓到', '风格提炼好了，有 {n} 个链接没抓到'), { n: missed }) : t('风格提炼好了，之后就按它写'), { undo: true })
+    toast(missed ? t(plural(missed, 'Style learned. 1 link couldn’t be read', 'Style learned. {n} links couldn’t be read'), { n: missed }) : t('Style learned. New drafts will use it'), { undo: true })
     return true
   } catch (err) {
     report(err)
@@ -302,9 +302,9 @@ export async function importAccount(payload) {
   try {
     const data = await request('monid/import', payload)
     setDesk({ state: data.state, canUndo: true })
-    const spent = data.cost ? t('，花费 ${cost}', { cost: data.cost.toFixed(3) }) : ''
-    const what = t(plural(data.count, '读到 {name} 的 1 条内容，新增 {added} 条', '读到 {name} 的 {count} 条内容，新增 {added} 条'), { name: data.nickname, count: data.count, added: data.added })
-    toast(data.styleError ? t('{what}{spent}。风格没提炼成：{error}', { what, spent, error: data.styleError }) : t('{what}，已提炼成风格{spent}', { what, spent }), { error: Boolean(data.styleError), undo: !data.styleError })
+    const spent = data.cost ? t(' · ${cost}', { cost: data.cost.toFixed(3) }) : ''
+    const what = t(plural(data.count, 'Imported 1 post from {name} ({added} new)', 'Imported {count} posts from {name} ({added} new)'), { name: data.nickname, count: data.count, added: data.added })
+    toast(data.styleError ? t('{what}{spent}. Couldn’t learn the style: {error}', { what, spent, error: data.styleError }) : t('{what}. Style learned{spent}', { what, spent }), { error: Boolean(data.styleError), undo: !data.styleError })
     return true
   } catch (err) {
     report(err)
@@ -316,7 +316,7 @@ export async function learnSkills() {
   try {
     const data = await request('skills/learn', {})
     setDesk({ state: data.state, canUndo: true })
-    toast(data.added ? t(plural(data.added, '从数据里提炼出 1 条新规则，等你确认', '从数据里提炼出 {n} 条新规则，等你确认'), { n: data.added }) : t('目前的数据还提炼不出新规则'))
+    toast(data.added ? t(plural(data.added, 'Found 1 new rule for you to review', 'Found {n} new rules for you to review'), { n: data.added }) : t('Not enough data for new rules yet'))
   } catch (err) {
     report(err)
   }
@@ -326,7 +326,7 @@ export async function exportSkills() {
   try {
     const data = await request('skills/export', {})
     setDesk({ state: data.state })
-    toast(t(plural(data.rules, '已导出 Skill：{name}（1 条规则）', '已导出 Skill：{name}（{n} 条规则）'), { name: data.name, n: data.rules }))
+    toast(t(plural(data.rules, 'Exported skill “{name}” (1 rule)', 'Exported skill “{name}” ({n} rules)'), { name: data.name, n: data.rules }))
   } catch (err) {
     report(err)
   }

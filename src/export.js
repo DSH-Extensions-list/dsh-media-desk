@@ -7,7 +7,7 @@ import { currentLang, tr } from './i18n.js'
 
 export function defaultExportDir() {
   // 已经有中文文件夹的老用户切到英文后继续用原来的文件夹
-  const zh = join(homedir(), 'Documents', '自媒体工作台')
+  const zh = join(homedir(), 'Documents', 'Media Desk')
   if (currentLang() !== 'en' || existsSync(zh)) return zh
   return join(homedir(), 'Documents', 'Media Desk')
 }
@@ -20,7 +20,7 @@ export function resolveExportDir(value) {
 
 function folderName(title) {
   const clean = String(title ?? '').replace(/[\\/:*?"<>|\n\r\t]/g, ' ').replace(/\s+/g, ' ').replace(/^[.\s]+|[.\s]+$/g, '').slice(0, 60)
-  return clean || tr('未命名')
+  return clean || tr('Untitled')
 }
 
 function cell(text) {

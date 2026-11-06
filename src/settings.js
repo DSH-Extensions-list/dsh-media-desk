@@ -45,7 +45,7 @@ export class Settings {
     }
     if (typeof image.baseUrl === 'string') {
       const url = image.baseUrl.trim().replace(/\/+$/, '').replace(/\/images\/generations$/, '')
-      if (url && !/^https?:\/\/[^\s]+$/i.test(url)) throw Object.assign(new Error(tr('接口地址要以 http:// 或 https:// 开头')), { status: 400 })
+      if (url && !/^https?:\/\/[^\s]+$/i.test(url)) throw Object.assign(new Error(tr('The endpoint must start with http:// or https://')), { status: 400 })
       next.image.baseUrl = url
     }
     if (typeof image.extra === 'string') {
@@ -57,7 +57,7 @@ export class Settings {
         } catch {
           parsed = null
         }
-        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw Object.assign(new Error(tr('附加参数要是一个 JSON 对象')), { status: 400 })
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw Object.assign(new Error(tr('Extra parameters must be a JSON object')), { status: 400 })
       }
       next.image.extra = extra
     }

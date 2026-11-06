@@ -88,8 +88,8 @@ export function proposeRules(state) {
     const best = byPlatform[0]
     const platform = platformName(best.key)
     proposals.push({
-      name: tr('首发放在{platform}', { platform }), rule: tr('同一选题优先在{platform}首发，再改写分发到其他平台。', { platform }),
-      evidence: tr('{platform}平均 {avg} 阅读，高于第二名{second}的 {secondAvg}', { platform, avg: Math.round(best.avg).toLocaleString('en-US'), second: platformName(byPlatform[1].key), secondAvg: Math.round(byPlatform[1].avg).toLocaleString('en-US') }), confidence: Math.min(0.85, 0.4 + best.n * 0.12), source: tr('数据复盘'),
+      name: tr('Publish first on {platform}', { platform }), rule: tr('Publish each topic on {platform} first, then adapt it for the other platforms.', { platform }),
+      evidence: tr('{platform} averages {avg} views, ahead of {second} in second place at {secondAvg}', { platform, avg: Math.round(best.avg).toLocaleString('en-US'), second: platformName(byPlatform[1].key), secondAvg: Math.round(byPlatform[1].avg).toLocaleString('en-US') }), confidence: Math.min(0.85, 0.4 + best.n * 0.12), source: tr('Insights'),
     })
   }
 
@@ -97,8 +97,8 @@ export function proposeRules(state) {
   const hours = bestGroup(published.filter(item => item.publishedAt).map(item => ({ key: String(new Date(item.publishedAt).getHours()), value: hasViews ? totals.get(item.id).views : engagement(totals.get(item.id)) })))
   if (hours.length >= 2 && hours[0].n >= 2) {
     proposals.push({
-      name: tr('{hour} 点前后发布', { hour: hours[0].key }), rule: tr('默认把内容排在 {hour}:00 前后发布。', { hour: hours[0].key }),
-      evidence: tr(hasViews ? '这个时段 {n} 篇平均 {avg} 阅读' : '这个时段 {n} 篇平均 {avg} 互动', { n: hours[0].n, avg: Math.round(hours[0].avg).toLocaleString('en-US') }), confidence: 0.5, source: tr('数据复盘'),
+      name: tr('Publish around {hour}:00', { hour: hours[0].key }), rule: tr('Schedule posts around {hour}:00 by default.', { hour: hours[0].key }),
+      evidence: tr(hasViews ? '{n} posts in this slot average {avg} views' : '{n} posts in this slot average {avg} engagements', { n: hours[0].n, avg: Math.round(hours[0].avg).toLocaleString('en-US') }), confidence: 0.5, source: tr('Insights'),
     })
   }
 
@@ -106,9 +106,9 @@ export function proposeRules(state) {
   if (edits.length >= 2) {
     const avg = edits.reduce((a, b) => a + b.ratio, 0) / edits.length
     if (avg < 0.85) {
-      proposals.push({ name: tr('初稿写短一些'), rule: tr('你通常把 AI 初稿删到原来的 {pct}%，以后初稿控制得更紧凑。', { pct: Math.round(avg * 100) }), evidence: tr('来自 {n} 次草稿修改', { n: edits.length }), confidence: Math.min(0.9, 0.5 + edits.length * 0.08), source: tr('草稿修改') })
+      proposals.push({ name: tr('Shorter first drafts'), rule: tr('You usually cut AI drafts to {pct}% of their length, so first drafts should be tighter.', { pct: Math.round(avg * 100) }), evidence: tr('From {n} draft edits', { n: edits.length }), confidence: Math.min(0.9, 0.5 + edits.length * 0.08), source: tr('Draft edits') })
     } else if (avg > 1.15) {
-      proposals.push({ name: tr('初稿多给细节'), rule: tr('你通常把 AI 初稿扩写到原来的 {pct}%，以后初稿多给具体细节和例子。', { pct: Math.round(avg * 100) }), evidence: tr('来自 {n} 次草稿修改', { n: edits.length }), confidence: Math.min(0.9, 0.5 + edits.length * 0.08), source: tr('草稿修改') })
+      proposals.push({ name: tr('More detail in first drafts'), rule: tr('You usually expand AI drafts to {pct}% of their length, so first drafts should bring more specific details and examples.', { pct: Math.round(avg * 100) }), evidence: tr('From {n} draft edits', { n: edits.length }), confidence: Math.min(0.9, 0.5 + edits.length * 0.08), source: tr('Draft edits') })
     }
   }
 
@@ -179,13 +179,13 @@ export async function exportSkill(state, home) {
   if (!rules.length && !style) {
     // 之前导出过的旧 Skill 不再代表现在的设置，撤掉它
     await rm(dir, { recursive: true, force: true })
-    throw Object.assign(new Error(tr('还没有你自己的风格或规则。示例规则和模板不会被导出')), { status: 400 })
+    throw Object.assign(new Error(tr('You don\'t have your own style or writing rules yet. Sample rules and presets are never exported.')), { status: 400 })
   }
   await mkdir(dir, { recursive: true })
-  const description = tr('作者的自媒体写作风格和规则。写选题、脚本、标题或封面文案时使用。')
-  const styleBlock = style ? `## ${tr('风格：{name}', { name: style.name })}\n\n${styleToVoice(style)}\n\n` : ''
-  const ruleBlock = rules.length ? `## ${tr('必须遵守的规则')}\n\n${rules.map(r => `- **${r.name}**${tr('：')}${r.rule}${r.evidence ? tr('（依据：{evidence}）', { evidence: r.evidence }) : ''}`).join('\n')}\n` : ''
-  const body = `---\nname: ${name}\ndescription: ${description}\n---\n\n# ${tr('自媒体写作风格')}\n\n${tr('由「自媒体工作台」沉淀，更新于 {date}。', { date: new Date().toISOString().slice(0, 10) })}\n\n${styleBlock}${ruleBlock}`
+  const description = tr('The author\'s social media writing style and rules. Use it when writing topics, scripts, titles or cover text.')
+  const styleBlock = style ? `## ${tr('Style: {name}', { name: style.name })}\n\n${styleToVoice(style)}\n\n` : ''
+  const ruleBlock = rules.length ? `## ${tr('Rules to follow')}\n\n${rules.map(r => `- **${r.name}**${tr('：')}${r.rule}${r.evidence ? tr(' (based on: {evidence})', { evidence: r.evidence }) : ''}`).join('\n')}\n` : ''
+  const body = `---\nname: ${name}\ndescription: ${description}\n---\n\n# ${tr('Writing style')}\n\n${tr('Generated by Media Desk. Updated {date}.', { date: new Date().toISOString().slice(0, 10) })}\n\n${styleBlock}${ruleBlock}`
   await writeFile(join(dir, 'SKILL.md'), body)
   return { name, path: join(dir, 'SKILL.md'), rules: rules.length, slug: slug(name, 'media-desk') }
 }

@@ -67,7 +67,7 @@ function Board({ items }) {
               event.preventDefault()
               setOver(null)
               const id = event.dataTransfer.getData('text/media-desk-item')
-              if (id) dispatchOps([{ op: 'set_status', id, status }], { label: t('修改状态') })
+              if (id) dispatchOps([{ op: 'set_status', id, status }], { label: t('Change status') })
             }}
           >
             <header>
@@ -87,11 +87,11 @@ function Board({ items }) {
 
 // label 是中文原文，显示时再翻译
 const COLUMNS = [
-  { key: 'title', label: '内容', get: i => i.title },
-  { key: 'status', label: '状态', get: i => STATUSES.indexOf(i.status) },
-  { key: 'platform', label: '平台', get: i => i.platform ?? '' },
-  { key: 'scheduledAt', label: '排期', get: i => i.scheduledAt ?? '' },
-  { key: 'createdAt', label: '记录于', get: i => i.createdAt },
+  { key: 'title', label: 'Content', get: i => i.title },
+  { key: 'status', label: 'Status', get: i => STATUSES.indexOf(i.status) },
+  { key: 'platform', label: 'Platform', get: i => i.platform ?? '' },
+  { key: 'scheduledAt', label: 'Schedule', get: i => i.scheduledAt ?? '' },
+  { key: 'createdAt', label: 'Added', get: i => i.createdAt },
 ]
 
 function Table({ items }) {
@@ -126,7 +126,7 @@ function Table({ items }) {
               <tr key={item.id} onClick={() => openItem(item.id)} tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter') openItem(item.id) }}>
                 <td className="md-table-title">
                   <span className="md-thumb">{poster ? <img src={poster} alt="" loading="lazy" /> : <span>{item.title.slice(0, 1)}</span>}</span>
-                  <span><strong>{item.title}</strong><small>{item.parentId ? `${t('分支')} · ` : ''}{t(KIND_LABEL[item.kind])}{item.source ? ` · ${item.source}` : ''}</small></span>
+                  <span><strong>{item.title}</strong><small>{item.parentId ? `${t('Variant')} · ` : ''}{t(KIND_LABEL[item.kind])}{item.source ? ` · ${item.source}` : ''}</small></span>
                 </td>
                 <td><span className={`md-status status-${item.status}`}>{t(STATUS_LABEL[item.status])}</span></td>
                 <td>{item.platform ? t(item.platform) : '—'}</td>
@@ -152,22 +152,22 @@ export function ContentView() {
     <div className="md-page">
       <header className="md-page-head">
         <div>
-          <h1>{t('内容')}</h1>
+          <h1>{t('Content')}</h1>
           <p className="md-page-sub">{[
-            t(plural(items.length, '共 1 条', '共 {n} 条'), { n: items.length }),
-            t(plural(counts[0], '1 个灵感待推进', '{n} 个灵感待推进'), { n: counts[0] }),
-            t('{n} 篇已成稿', { n: drafts }),
-            t('{n} 篇已发布', { n: counts[4] }),
+            t(plural(items.length, '1 item', '{n} items'), { n: items.length }),
+            t(plural(counts[0], '1 idea to develop', '{n} ideas to develop'), { n: counts[0] }),
+            t('{n} drafted', { n: drafts }),
+            t('{n} published', { n: counts[4] }),
           ].join(' · ')}</p>
         </div>
         <span style={{ flex: 1 }} />
         <label className="md-search">
           <Icon name="search" size={15} />
-          <input value={query} onChange={e => setDesk({ query: e.target.value })} placeholder={t('搜索标题、标签、平台')} aria-label={t('搜索内容')} />
+          <input value={query} onChange={e => setDesk({ query: e.target.value })} placeholder={t('Search titles, tags, platforms')} aria-label={t('Search content')} />
         </label>
-        <Segmented label={t('显示方式')} value={mode} onChange={setMode} options={[{ value: 'board', label: t('看板') }, { value: 'table', label: t('表格') }]} />
+        <Segmented label={t('View')} value={mode} onChange={setMode} options={[{ value: 'board', label: t('Board') }, { value: 'table', label: t('Table') }]} />
       </header>
-      {items.length === 0 ? <Empty title={query ? t('没有匹配的内容') : t('还没有内容')} hint={query ? t('换个关键词试试。') : t('到灵感页记下第一条。')} /> : mode === 'board' ? <Board items={items} /> : <Table items={items} />}
+      {items.length === 0 ? <Empty title={query ? t('No matches') : t('No content yet')} hint={query ? t('Try another keyword.') : t('Add your first idea on the Ideas page.')} /> : mode === 'board' ? <Board items={items} /> : <Table items={items} />}
     </div>
   )
 }

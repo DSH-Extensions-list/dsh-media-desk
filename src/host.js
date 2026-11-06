@@ -37,7 +37,7 @@ async function readBuffer(req, limit) {
   let size = 0
   for await (const chunk of req) {
     size += chunk.length
-    if (size > limit) throw Object.assign(new Error(tr('内容太大')), { status: 413 })
+    if (size > limit) throw Object.assign(new Error(tr('The content is too large')), { status: 413 })
     chunks.push(chunk)
   }
   return Buffer.concat(chunks)
@@ -49,19 +49,19 @@ async function readJson(req) {
   try {
     return JSON.parse(raw.toString('utf8'))
   } catch {
-    throw Object.assign(new Error(tr('请求不是有效的 JSON')), { status: 400 })
+    throw Object.assign(new Error(tr('The request is not valid JSON')), { status: 400 })
   }
 }
 
 /** 支持 Range，视频才能正常拖动和循环。 */
 async function sendFile(req, res, file) {
   const type = MIME[extname(file).toLowerCase()]
-  if (!type) return json(res, 404, { error: tr('不支持的文件类型') })
+  if (!type) return json(res, 404, { error: tr('Unsupported file type') })
   let info
   try {
     info = await stat(file)
   } catch {
-    return json(res, 404, { error: tr('文件不存在') })
+    return json(res, 404, { error: tr('File not found') })
   }
   res.setHeader('content-type', type)
   res.setHeader('accept-ranges', 'bytes')
@@ -95,12 +95,12 @@ function engineLabel(ctx) {
 /** 同一次故障只提醒一次，用人话说。原始错误放在模型状态的提示里。 */
 function outageNotice(ctx, wasDown, fallback) {
   if (wasDown) return null
-  return modelInfo(ctx) ? tr('模型暂时用不了，{fallback}。可以到设置里检查账号或密钥。', { fallback }) : tr('当前没有连接模型，{fallback}。', { fallback })
+  return modelInfo(ctx) ? tr('The model is unavailable right now, so {fallback}. You can check your account or key in settings.', { fallback }) : tr('No model is connected, so {fallback}.', { fallback })
 }
 
 async function chatTurn(ctx, store, desk, body) {
   const message = String(body.message || '').trim()
-  if (!message) throw Object.assign(new Error(tr('消息为空')), { status: 400 })
+  if (!message) throw Object.assign(new Error(tr('The message is empty')), { status: 400 })
   const focusId = typeof body.focusId === 'string' ? body.focusId : undefined
   const state = await store.read()
   const snapshot = JSON.parse(JSON.stringify(state))
@@ -116,19 +116,19 @@ async function chatTurn(ctx, store, desk, body) {
     engine = model
     try {
       plan = extractJson(text)
-      if (typeof plan.reply !== 'string') plan.reply = tr('处理好了。')
+      if (typeof plan.reply !== 'string') plan.reply = tr('Done.')
     } catch {
       // 模型只回了一段话时，当成普通回答，不算失败
-      plan = { reply: text.trim().slice(0, 1200) || tr('我没有听懂，可以换个说法吗？'), ops: [] }
+      plan = { reply: text.trim().slice(0, 1200) || tr('I didn\'t catch that. Could you put it another way?'), ops: [] }
     }
   } catch {
-    notice = outageNotice(ctx, wasDown, tr('先用本地规则处理'))
+    notice = outageNotice(ctx, wasDown, tr('I used local rules instead'))
     plan = localIntent(snapshot, message, { focusId })
   }
   const settings = await desk.settings.read()
   const canDraw = imageReady(settings)
   // 只把真正改了数据的那一步放进撤销；问一句话不占撤销位
-  const changed = await store.mutate(tr('对话：{text}', { text: message.slice(0, 18) }), (draft) => {
+  const changed = await store.mutate(tr('Chat: {text}', { text: message.slice(0, 18) }), (draft) => {
     const target = focusId ? draft.items.find(row => row.id === focusId) : null
     const production = target?.production?.status === 'done' ? target.production : null
     // 本地规则只会改灵感标题；有成稿时要改的是成稿标题
@@ -176,17 +176,17 @@ async function extractStyle(ctx, store, body) {
     try {
       const page = await harvestText(url)
       if (page.text.length >= 80) parts.push(`${page.title ?? ''}\n${page.text}`)
-      else failures.push(tr('{url}：页面上几乎没有文字，可能需要登录', { url }))
+      else failures.push(tr('{url}: there is almost no text on the page. It may require sign-in.', { url }))
     } catch (err) {
       failures.push(tr('{url}：{error}', { url, error: err.message }))
     }
   }
   const material = parts.join('\n\n---\n\n')
   if (material.length < 80) {
-    throw Object.assign(new Error(failures.length ? tr('抓不到内容。{reason}。可以把内容直接贴进来。', { reason: failures[0] }) : tr('内容太少了，至少贴一段完整的文字')), { status: 400 })
+    throw Object.assign(new Error(failures.length ? tr('Couldn\'t get the content. {reason}. You can paste the text in directly.', { reason: failures[0] }) : tr('That is too little text. Paste at least one full paragraph.')), { status: 400 })
   }
   const name = typeof body.name === 'string' ? body.name.trim().slice(0, 20) : ''
-  const source = urls.length && parts.length === urls.length ? tr('链接') : urls.length ? tr('内容和链接') : tr('内容')
+  const source = urls.length && parts.length === urls.length ? tr('Link') : urls.length ? tr('Text and links') : tr('Content')
   return styleFromMaterial(ctx, store, { material, name, source, sourceUrls: urls, failures })
 }
 
@@ -198,9 +198,9 @@ async function styleFromMaterial(ctx, store, { material, name, source, sourceUrl
     const { text } = await callModel(ctx, { system, user, maxTokens: 1500, light: true, signal: AbortSignal.timeout(120_000) })
     style = normalizeStyle(extractJson(text), name)
   } catch (err) {
-    throw Object.assign(new Error(tr('提炼风格需要文字模型：{error}', { error: err.message })), { status: 502 })
+    throw Object.assign(new Error(tr('Learning a style needs a text model: {error}', { error: err.message })), { status: 502 })
   }
-  return store.mutate(tr('提炼风格「{name}」', { name: style.name }), (draft) => {
+  return store.mutate(tr('Learn style "{name}"', { name: style.name }), (draft) => {
     const existing = accountKey ? (draft.styles ?? []).find(row => row.accountKey === accountKey) : null
     const id = existing?.id ?? newId('st')
     const row = { id, ...style, source, sourceUrls, ...(accountKey ? { accountKey } : {}), createdAt: existing?.createdAt ?? new Date().toISOString() }
@@ -212,24 +212,24 @@ async function styleFromMaterial(ctx, store, { material, name, source, sourceUrl
 
 /** 导入用户自己的账号。钱花在 Monid 上，所以先把内容存好，提炼失败也不会白花。 */
 async function importAccountRoute(ctx, store, desk, body) {
-  if (desk.importing) throw Object.assign(new Error(tr('上一个账号还在导入，等它结束再试')), { status: 409 })
+  if (desk.importing) throw Object.assign(new Error(tr('Another account is still importing. Try again when it finishes.')), { status: 409 })
   desk.importing = true
   try {
     const account = await resolveAccount(body.text)
     const { posts, profile, cost } = await fetchAccount(account, desk.monid)
     const covers = await saveCovers(posts, account.platform, await store.read(), store.filesDir)
-    const added = await store.mutate(tr('导入{platform}账号', { platform: platformName(account.platform) }), draft => importPosts(draft, { account, profile, posts, covers }).added)
+    const added = await store.mutate(tr('Import {platform} account', { platform: platformName(account.platform) }), draft => importPosts(draft, { account, profile, posts, covers }).added)
     const nickname = profile.nickname || platformName(account.platform)
     let styleError = null
     const material = postsToMaterial(posts)
     if (material.length >= 80) {
       try {
-        await styleFromMaterial(ctx, store, { material, name: nickname, source: tr('{platform}账号', { platform: platformName(account.platform) }), sourceUrls: [account.url], accountKey: `${account.platform}:${account.id}` })
+        await styleFromMaterial(ctx, store, { material, name: nickname, source: tr('{platform} account', { platform: platformName(account.platform) }), sourceUrls: [account.url], accountKey: `${account.platform}:${account.id}` })
       } catch (err) {
         styleError = err.message
       }
     } else {
-      styleError = tr('这个账号的文字太少，提炼不出风格')
+      styleError = tr('This account doesn\'t have enough text to learn a style from.')
     }
     return { platform: account.platform, nickname, count: posts.length, added, cost, styleName: styleError ? null : nickname, styleError, state: await store.read() }
   } finally {
@@ -244,7 +244,7 @@ async function addFromUrl(ctx, store, body) {
     op: 'add_item', kind: 'web', title: body.title || info.title || url, body: body.note || info.description || '', url: info.url, source: info.siteName, tags: Array.isArray(body.tags) ? body.tags : [],
     media: info.image ? { src: info.image } : null,
   }
-  return store.mutate(tr('收藏《{title}》', { title: op.title.slice(0, 12) }), (draft) => {
+  return store.mutate(tr('Save "{title}"', { title: op.title.slice(0, 12) }), (draft) => {
     const { receipts, errors } = applyOps(draft, [op])
     return { receipts, errors, id: receipts[0]?.target, state: draft }
   })
@@ -260,7 +260,7 @@ async function refreshAccount(store, body) {
   } catch (err) {
     patch = { url, fetchedAt: now, fetchError: err.message }
   }
-  return store.mutate(tr('更新账号档案'), (draft) => {
+  return store.mutate(tr('Update account profile'), (draft) => {
     const op = body.id ? { op: 'update_account', id: body.id, ...patch } : { op: 'add_account', platform: body.platform ?? '', handle: body.handle ?? '', ...patch }
     const { errors } = applyOps(draft, [op])
     return { state: draft, errors, fetchError: patch.fetchError || null }
@@ -270,7 +270,7 @@ async function refreshAccount(store, body) {
 async function handleUpload(req, store, res) {
   const type = (req.headers['content-type'] || '').split(';')[0].trim().toLowerCase()
   const ext = UPLOAD_EXT[type]
-  if (!ext) return json(res, 415, { error: tr('不支持这种文件：{type}', { type: type || tr('未知') }) })
+  if (!ext) return json(res, 415, { error: tr('Unsupported file: {type}', { type: type || tr('unknown') }) })
   const buffer = await readBuffer(req, MAX_UPLOAD)
   await store.read()
   const name = `${newId('f')}${ext}`
@@ -285,12 +285,12 @@ async function route(ctx, store, desk, req, res) {
 
   if ((method === 'GET' || method === 'HEAD') && path.startsWith('assets/')) {
     const name = path.slice('assets/'.length)
-    if (!/^[\w.-]+$/.test(name)) return json(res, 400, { error: tr('路径无效') })
+    if (!/^[\w.-]+$/.test(name)) return json(res, 400, { error: tr('Invalid path') })
     return sendFile(req, res, join(ASSETS_DIR, name))
   }
   if ((method === 'GET' || method === 'HEAD') && path.startsWith('files/')) {
     const name = path.slice('files/'.length)
-    if (!/^[\w.-]+$/.test(name)) return json(res, 400, { error: tr('路径无效') })
+    if (!/^[\w.-]+$/.test(name)) return json(res, 400, { error: tr('Invalid path') })
     await store.read()
     return sendFile(req, res, join(store.filesDir, name))
   }
@@ -312,19 +312,19 @@ async function route(ctx, store, desk, req, res) {
     if (path === 'settings') return json(res, 200, { ...publicSettings(await desk.settings.read()), defaultExportDir: defaultExportDir() })
     if (path === 'insights') return json(res, 200, computeInsights(await store.read()))
     if (path === 'monid/status') return json(res, 200, await monidStatus(desk.monid))
-    return json(res, 404, { error: tr('接口不存在') })
+    return json(res, 404, { error: tr('Not found') })
   }
-  if (method !== 'POST') return json(res, 405, { error: tr('不支持的方法') })
+  if (method !== 'POST') return json(res, 405, { error: tr('Method not allowed') })
 
   // 所有写操作都拒绝跨站请求
   const site = req.headers['sec-fetch-site']
-  if (site && site !== 'same-origin' && site !== 'none') return json(res, 403, { error: tr('拒绝跨站请求') })
+  if (site && site !== 'same-origin' && site !== 'none') return json(res, 403, { error: tr('Cross-site request refused') })
 
   if (path === 'upload') return handleUpload(req, store, res)
   const body = await readJson(req)
   switch (path) {
     case 'ops': {
-      const label = typeof body.label === 'string' ? body.label : tr('操作')
+      const label = typeof body.label === 'string' ? body.label : tr('Action')
       const result = await store.mutate(label, (draft) => {
         const applied = applyOps(draft, body.ops)
         return { ...applied, state: draft }
@@ -337,7 +337,7 @@ async function route(ctx, store, desk, req, res) {
     }
     case 'chat': return json(res, 200, await chatTurn(ctx, store, desk, body))
     case 'chat/clear': {
-      const state = await store.mutate('清空对话', (draft) => { draft.chat = []; return draft }, { undoable: false })
+      const state = await store.mutate('Clear chat', (draft) => { draft.chat = []; return draft }, { undoable: false })
       return json(res, 200, { state })
     }
     case 'produce': {
@@ -354,12 +354,12 @@ async function route(ctx, store, desk, req, res) {
       const settings = await desk.settings.read()
       const state = await store.read()
       const item = state.items.find(row => row.id === body.id)
-      if (!item?.production?.article) return json(res, 400, { error: tr('还没有可以保存的成稿') })
+      if (!item?.production?.article) return json(res, 400, { error: tr('Nothing drafted to save yet') })
       await store.read()
       // 视频封面由浏览器合成（画面叠大字），这里只接受 JPEG
       const match = /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(body.videoCover ?? '')
       const videoCover = match ? Buffer.from(match[1], 'base64') : null
-      if (videoCover && !(videoCover[0] === 0xff && videoCover[1] === 0xd8)) return json(res, 400, { error: tr('封面不是有效的图片') })
+      if (videoCover && !(videoCover[0] === 0xff && videoCover[1] === 0xd8)) return json(res, 400, { error: tr('The cover isn\'t a valid image') })
       const saved = await saveProduction(item.production, { filesDir: store.filesDir, exportDir: resolveExportDir(settings.exportDir), videoCover })
       const next = await store.mutate('保存成稿', (draft) => {
         const target = draft.items.find(row => row.id === body.id)
@@ -375,7 +375,7 @@ async function route(ctx, store, desk, req, res) {
       // 路径只取自保存记录，不接受请求里传来的路径
       const state = await store.read()
       const path = state.items.find(row => row.id === body.id)?.production?.savedPath
-      if (!path) return json(res, 400, { error: tr('还没有保存过') })
+      if (!path) return json(res, 400, { error: tr('Not saved yet') })
       const command = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'explorer' : 'xdg-open'
       execFile(command, [path], () => {})
       return json(res, 200, { path })
@@ -386,7 +386,7 @@ async function route(ctx, store, desk, req, res) {
       return json(res, 200, { ...publicSettings(await desk.settings.update(body)), defaultExportDir: defaultExportDir() })
     case 'settings/test': {
       const settings = await desk.settings.read()
-      if (!imageReady(settings)) return json(res, 400, { error: tr('先填好接口地址、模型和密钥') })
+      if (!imageReady(settings)) return json(res, 400, { error: tr('Fill in the endpoint, model and key first') })
       await store.read()
       const { buffer, ext } = await generateImage(settings.image, 'A single paper boat on calm water, black and white pencil line art sketch, plain white paper background, no text.')
       const name = `${newId('t')}${ext}`
@@ -398,7 +398,7 @@ async function route(ctx, store, desk, req, res) {
     case 'skills/learn': {
       const proposals = proposeRules(await store.read())
       if (!proposals.length) return json(res, 200, { added: 0, state: await store.read() })
-      const state = await store.mutate(tr('从数据中学习'), (draft) => {
+      const state = await store.mutate(tr('Learn from data'), (draft) => {
         // 只用示例数据算出来的建议也算示例，清空示例时一起清掉，也不会被导出
         const fromSamples = !draft.metrics.some(metric => !metric.sample)
         const { receipts } = applyOps(draft, proposals.map(row => ({ op: 'add_skill', ...row, status: 'proposed' })))
@@ -416,7 +416,7 @@ async function route(ctx, store, desk, req, res) {
       }, { undoable: false })
       return json(res, 200, { ...result, state: next })
     }
-    default: return json(res, 404, { error: tr('接口不存在') })
+    default: return json(res, 404, { error: tr('Not found') })
   }
 }
 
@@ -450,7 +450,7 @@ export default {
         try {
           const rejection = requestRejection(ctx, req)
           if (rejection) {
-            json(res, rejection, { error: tr('未授权') })
+            json(res, rejection, { error: tr('Not authorized') })
             return
           }
           await withLang(req.headers['x-media-desk-lang'], () => route(ctx, store, desk, req, res))

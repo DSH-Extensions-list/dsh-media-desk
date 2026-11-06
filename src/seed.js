@@ -7,22 +7,22 @@ const A = name => `media-desk/assets/${name}`
 const RAW = [
   { k: 'image', img: ['hills', 900, 620], t: '普通人第一次用 AI 做出能赚钱的东西，到底卡在哪', b: '不是不会提示词，是不知道第一个可以卖的东西长什么样。把这一步拆成三张图。', tags: ['AI', '变现'], a: 'case', p: ['newbie'], st: 'draft', day: 0, src: '路上想到' },
   { k: 'quote', t: '好的选题不是想出来的，是被你反复抱怨出来的。', b: '把一周的吐槽记下来，重复三次以上的就是选题。', tags: ['方法论'], a: 'opinion', p: ['creator'], st: 'idea', day: 0, src: '读书笔记' },
-  { k: 'video', vid: ['v-aurora', 540, 720], t: '30 秒看懂 Agent 和聊天机器人的区别', b: '一个等你问，一个替你干。用极光般流动的任务图做开场。', tags: ['AI', '科普'], a: 'explain', p: ['newbie'], st: 'outline', day: -1, sch: [2, 20], pf: '抖音', src: '竖屏脚本' },
+  { k: 'video', vid: ['v-aurora', 540, 720], t: '30 秒看懂 Agent 和聊天机器人的区别', b: '一个等你问，一个替你干。用极光般流动的任务图做开场。', tags: ['AI', '科普'], a: 'explain', p: ['newbie'], st: 'outline', day: -1, sch: [2, 20], pf: 'Douyin', src: '竖屏脚本' },
   { k: 'web', img: ['topo', 720, 720], t: '一份给独立开发者的定价地图', b: '把 40 个独立产品的定价页放在一张地形图上，高地与洼地一目了然。', tags: ['独立开发', '定价'], a: 'data', p: ['indie'], st: 'idea', day: -1, url: 'https://example.com/pricing-map', src: 'example.com' },
   { k: 'image', img: ['facade', 720, 940], t: '老城立面：被时间改写的设计系统', b: '每一扇窗都是后来者的补丁。用来讲软件的技术债，再合适不过。', tags: ['设计', '隐喻'], a: 'analogy', p: ['creator'], st: 'idea', day: -2, src: '街拍' },
-  { k: 'note', t: '发布前 10 分钟检查清单', b: '标题有没有动词；前三秒说人话；封面手机上看得清；结尾只留一个行动。', tags: ['工作流'], a: 'list', p: ['creator'], st: 'ready', day: -2, sch: [1, 9], pf: '小红书', src: '自用清单' },
-  { k: 'image', img: ['poster', 720, 960], t: '慢写：把一个念头养成一篇长文', b: '不追热点的一周实验：每天只写 200 字，第七天拼成一篇。', tags: ['写作'], a: 'story', p: ['creator'], st: 'published', day: -18, pub: -9, pf: '公众号', src: '封面实验' },
+  { k: 'note', t: '发布前 10 分钟检查清单', b: '标题有没有动词；前三秒说人话；封面手机上看得清；结尾只留一个行动。', tags: ['工作流'], a: 'list', p: ['creator'], st: 'ready', day: -2, sch: [1, 9], pf: 'RedNote', src: '自用清单' },
+  { k: 'image', img: ['poster', 720, 960], t: '慢写：把一个念头养成一篇长文', b: '不追热点的一周实验：每天只写 200 字，第七天拼成一篇。', tags: ['写作'], a: 'story', p: ['creator'], st: 'published', day: -18, pub: -9, pf: 'WeChat', src: '封面实验' },
   { k: 'quote', t: '工具的终点，是让你忘记它。', b: '写一篇关于「无感」的产品观察。', tags: ['产品'], a: 'opinion', p: ['indie'], st: 'idea', day: -3, src: '随手记' },
-  { k: 'video', vid: ['v-tide', 720, 540], t: '潮汐式工作法：两小时深潜，一小时靠岸', b: '用潮水比喻注意力，开头 5 秒海浪空镜配一句反问。', tags: ['效率'], a: 'analogy', p: ['newbie', 'creator'], st: 'draft', day: -3, sch: [4, 12], pf: 'B站', src: '分镜草图' },
-  { k: 'image', img: ['ink', 720, 960], t: '山水里的信息层级', b: '近景实、远景虚。中国画早就讲透了界面设计里的层级关系。', tags: ['设计', '文化'], a: 'analogy', p: ['creator'], st: 'outline', day: -4, sch: [6, 20], pf: '公众号', src: '展览笔记' },
+  { k: 'video', vid: ['v-tide', 720, 540], t: '潮汐式工作法：两小时深潜，一小时靠岸', b: '用潮水比喻注意力，开头 5 秒海浪空镜配一句反问。', tags: ['效率'], a: 'analogy', p: ['newbie', 'creator'], st: 'draft', day: -3, sch: [4, 12], pf: 'Bilibili', src: '分镜草图' },
+  { k: 'image', img: ['ink', 720, 960], t: '山水里的信息层级', b: '近景实、远景虚。中国画早就讲透了界面设计里的层级关系。', tags: ['设计', '文化'], a: 'analogy', p: ['creator'], st: 'outline', day: -4, sch: [6, 20], pf: 'WeChat', src: '展览笔记' },
   { k: 'web', img: ['collage', 780, 620], t: '十个让人想截图的数据图', b: '收集做得克制又好看的图表，拆解它们是怎么取舍的。', tags: ['数据', '设计'], a: 'list', p: ['creator'], st: 'idea', day: -4, url: 'https://example.com/charts', src: 'example.com' },
-  { k: 'image', img: ['dunes', 720, 960], t: '一人公司第 300 天：沙漠里的三次转向', b: '收入曲线、踩过的坑和那个差点放弃的下午。', tags: ['一人公司', '复盘'], a: 'story', p: ['indie'], st: 'published', day: -24, pub: -14, pf: '公众号', src: '复盘手稿' },
+  { k: 'image', img: ['dunes', 720, 960], t: '一人公司第 300 天：沙漠里的三次转向', b: '收入曲线、踩过的坑和那个差点放弃的下午。', tags: ['一人公司', 'Insights'], a: 'story', p: ['indie'], st: 'published', day: -24, pub: -14, pf: 'WeChat', src: '复盘手稿' },
   { k: 'note', t: '评论区问得最多的 5 个问题', b: '1. 没有技术背景能做吗；2. 每月成本多少；3. 用哪个模型；4. 数据安全吗；5. 多久能上手。', tags: ['用户洞察'], a: 'qa', p: ['newbie'], st: 'outline', day: -5, src: '评论区' },
-  { k: 'image', img: ['riso', 720, 860], t: '封面用色实验：高饱和条纹为什么点击率高', b: '做了三组 A/B，条纹款点击率最高，但完播并没有更好。', tags: ['封面', '实验'], a: 'data', p: ['creator'], st: 'published', day: -30, pub: -21, pf: '小红书', src: '实验记录' },
+  { k: 'image', img: ['riso', 720, 860], t: '封面用色实验：高饱和条纹为什么点击率高', b: '做了三组 A/B，条纹款点击率最高，但完播并没有更好。', tags: ['the cover', '实验'], a: 'data', p: ['creator'], st: 'published', day: -30, pub: -21, pf: 'RedNote', src: '实验记录' },
   { k: 'quote', t: '你不是缺灵感，你是缺一个存放灵感的地方。', b: '可以作为工作台本身的开场白。', tags: ['方法论'], a: 'opinion', p: ['creator'], st: 'idea', day: -6, src: '随手记' },
-  { k: 'video', vid: ['v-bus', 720, 480], t: '夜班巴士上写完的第一个产品', b: '城市光斑做背景，第一人称讲述。情绪优先，技术点到为止。', tags: ['故事', '独立开发'], a: 'story', p: ['indie', 'newbie'], st: 'published', day: -36, pub: -28, pf: '抖音', src: 'Vlog' },
+  { k: 'video', vid: ['v-bus', 720, 480], t: '夜班巴士上写完的第一个产品', b: '城市光斑做背景，第一人称讲述。情绪优先，技术点到为止。', tags: ['故事', '独立开发'], a: 'story', p: ['indie', 'newbie'], st: 'published', day: -36, pub: -28, pf: 'Douyin', src: 'Vlog' },
   { k: 'image', img: ['sea', 900, 600], t: '留白的勇气：三个删掉一半功能后变好的产品', b: '删除也是一种设计决策，用具体案例讲。', tags: ['产品', '设计'], a: 'case', p: ['indie', 'creator'], st: 'idea', day: -7, src: '产品观察' },
-  { k: 'web', img: ['stairs', 720, 720], t: '增长的台阶：从 0 到 1 万粉的真实阶段', b: '每一级台阶上该做的事都不一样，别用十万粉的方法做第一千粉。', tags: ['增长'], a: 'data', p: ['creator'], st: 'draft', day: -8, sch: [8, 20], pf: '公众号', url: 'https://example.com/steps', src: 'example.com' },
+  { k: 'web', img: ['stairs', 720, 720], t: '增长的台阶：从 0 到 1 万粉的真实阶段', b: '每一级台阶上该做的事都不一样，别用十万粉的方法做第一千粉。', tags: ['增长'], a: 'data', p: ['creator'], st: 'draft', day: -8, sch: [8, 20], pf: 'WeChat', url: 'https://example.com/steps', src: 'example.com' },
   { k: 'image', img: ['still', 720, 860], t: '桌上的橘子：一个关于「注意力」的开场', b: '盯着一个橘子看一分钟，然后问观众：你上一次这样专注是什么时候？', tags: ['开场', '效率'], a: 'story', p: ['newbie'], st: 'idea', day: -9, src: '灵感速记' },
   { k: 'image', img: ['emboss', 760, 760], t: '字体的触感：为什么浮雕字让人想摸屏幕', b: '从印刷工艺聊到界面里的拟物回潮。', tags: ['设计', '字体'], a: 'explain', p: ['creator'], st: 'idea', day: -10, src: '样张' },
   { k: 'video', vid: ['v-ink', 600, 600], t: '一滴墨的 8 秒：转场素材库', b: '水墨扩散可以当章节转场，整理成一套素材。', tags: ['素材', '剪辑'], a: 'list', p: ['creator'], st: 'idea', day: -11, src: '素材' },
@@ -84,10 +84,10 @@ const ANGLES_EN = {
 }
 
 const PEOPLE = [
-  ['newbie', '想入门的小林', '目标读者', '25–32 岁，上班族，想用 AI 提效或做副业，但怕被术语吓退。', ['怕术语', '想要第一步', '刷短视频'], 0],
-  ['creator', '自媒体同行阿澈', '目标读者', '已有数千粉，关心选题、封面和流程，愿意为方法论付费。', ['方法控', '爱收藏', '看数据'], 1],
-  ['indie', '独立开发者老周', '目标读者', '能写代码，缺增长和定价经验，喜欢看真实收入复盘。', ['重真实', '讨厌鸡汤', '长文读者'], 2],
-  ['editor', '剪辑搭子小满', '协作者', '负责短视频剪辑和封面，周二、周四有空档。', ['剪辑', '封面'], 3],
+  ['newbie', '想入门的小林', 'Target reader', '25–32 岁，上班族，想用 AI 提效或做副业，但怕被术语吓退。', ['怕术语', '想要第一步', '刷短视频'], 0],
+  ['creator', '自媒体同行阿澈', 'Target reader', '已有数千粉，关心选题、封面和流程，愿意为方法论付费。', ['方法控', '爱收藏', '看数据'], 1],
+  ['indie', '独立开发者老周', 'Target reader', '能写代码，缺增长和定价经验，喜欢看真实收入复盘。', ['重真实', '讨厌鸡汤', '长文读者'], 2],
+  ['editor', '剪辑搭子小满', '协作者', '负责短视频剪辑和封面，周二、周四有空档。', ['剪辑', 'the cover'], 3],
 ]
 
 const PEOPLE_EN = {
@@ -120,10 +120,10 @@ export function migrateState(state) {
 const SAMPLE_HANDLE = { zh: '示例账号', en: 'Sample account' }
 
 const ACCOUNTS = [
-  ['公众号', '示例账号', 12840],
-  ['小红书', '示例账号', 8620],
-  ['抖音', '示例账号', 21300],
-  ['B站', '示例账号', 5470],
+  ['WeChat', '示例账号', 12840],
+  ['RedNote', '示例账号', 8620],
+  ['Douyin', '示例账号', 21300],
+  ['Bilibili', '示例账号', 5470],
 ]
 
 function shift(base, days, hour = 10, minute = 0) {
@@ -189,7 +189,7 @@ export function buildSeed(now, lang = currentLang()) {
       const views = Math.round(peak * Math.exp(-d * 0.55) * (0.9 + ((d * 37) % 20) / 100))
       metrics.push({
         id: `seed_m_${item.id}_${d}`, itemId: item.id, platform: item.platform, date: date.toISOString(), views,
-        likes: Math.round(views * 0.046), comments: Math.round(views * 0.009), shares: Math.round(views * 0.012), saves: Math.round(views * (item.platform === '小红书' ? 0.05 : 0.018)), sample: true,
+        likes: Math.round(views * 0.046), comments: Math.round(views * 0.009), shares: Math.round(views * 0.012), saves: Math.round(views * (item.platform === 'RedNote' ? 0.05 : 0.018)), sample: true,
       })
     }
   }

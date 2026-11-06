@@ -19,10 +19,10 @@ function redact(text, key) {
 }
 
 function explain(status, detail) {
-  if (status === 401 || status === 403) return tr('密钥无效或没有这个模型的权限（{status}）', { status })
-  if (status === 404) return tr('接口地址或模型不对（404）')
-  if (status === 429) return tr('请求太频繁或额度不足（429）')
-  return detail ? tr('生图服务返回 {status}：{detail}', { status, detail }) : tr('生图服务返回 {status}', { status })
+  if (status === 401 || status === 403) return tr('The key is invalid or can\'t use this model ({status})', { status })
+  if (status === 404) return tr('Wrong endpoint or model (404)')
+  if (status === 429) return tr('Too many requests or out of quota (429)')
+  return detail ? tr('The image service returned {status}: {detail}', { status, detail }) : tr('The image service returned {status}', { status })
 }
 
 async function requestOnce(image, prompt, fetchImpl, signal) {
@@ -52,10 +52,10 @@ async function requestOnce(image, prompt, fetchImpl, signal) {
   if (entry?.url) {
     const url = await assertPublicUrl(entry.url)
     const download = await fetchImpl(url, { signal })
-    if (!download.ok) throw new Error(tr('下载图片失败（{status}）', { status: download.status }))
+    if (!download.ok) throw new Error(tr('Couldn\'t download the image ({status})', { status: download.status }))
     return { buffer: Buffer.from(await download.arrayBuffer()), revisedPrompt: entry.revised_prompt }
   }
-  const error = new Error(tr('生图服务没有返回图片'))
+  const error = new Error(tr('The image service didn\'t return an image'))
   error.retryable = !data
   throw error
 }
@@ -74,9 +74,9 @@ export async function generateImage(image, prompt, { fetchImpl = fetch, signal }
     const combined = signal ? AbortSignal.any([signal, timeout]) : timeout
     try {
       const { buffer } = await requestOnce(image, prompt, fetchImpl, combined)
-      if (buffer.length > MAX_IMAGE_BYTES) throw new Error(tr('图片太大'))
+      if (buffer.length > MAX_IMAGE_BYTES) throw new Error(tr('The image is too large'))
       const ext = extensionOf(buffer)
-      if (!ext) throw new Error(tr('返回的内容不是图片'))
+      if (!ext) throw new Error(tr('What came back isn\'t an image'))
       return { buffer, ext }
     } catch (err) {
       if (signal?.aborted) throw err
@@ -85,7 +85,7 @@ export async function generateImage(image, prompt, { fetchImpl = fetch, signal }
       if (!err.retryable && !network) break
     }
   }
-  const message = lastError.name === 'TimeoutError' ? tr('生图超时，可以重试') : lastError.name === 'TypeError' ? tr('连不上生图服务：{reason}', { reason: redact(lastError.cause?.code ?? lastError.message, image.apiKey) }) : redact(lastError.message, image.apiKey)
+  const message = lastError.name === 'TimeoutError' ? tr('Image generation timed out. You can retry.') : lastError.name === 'TypeError' ? tr('Can\'t reach the image service: {reason}', { reason: redact(lastError.cause?.code ?? lastError.message, image.apiKey) }) : redact(lastError.message, image.apiKey)
   throw new Error(message)
 }
 

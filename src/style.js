@@ -15,7 +15,7 @@ export function normalizeStyle(raw, preferredName = '') {
   const text = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '')
   const list = (value, count, max) => (Array.isArray(value) ? value.filter(row => typeof row === 'string' && row.trim()).slice(0, count).map(row => row.trim().slice(0, max)) : [])
   return {
-    name: text(preferredName, 20) || text(raw?.name, 20) || tr('未命名风格'),
+    name: text(preferredName, 20) || text(raw?.name, 20) || tr('Untitled style'),
     summary: text(raw?.summary, 80),
     tone: text(raw?.tone, 200),
     sentences: text(raw?.sentences, 200),

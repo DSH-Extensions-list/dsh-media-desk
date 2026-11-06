@@ -97,15 +97,15 @@ export function parseAccountUrl(raw) {
   const host = url.hostname.toLowerCase()
   if (hostIs(host, 'xiaohongshu.com')) {
     const id = /^\/user\/profile\/([0-9a-f]{24})(?:\/|$)/i.exec(url.pathname)?.[1]
-    return id ? { platform: '小红书', id, url: `https://www.xiaohongshu.com/user/profile/${id}` } : null
+    return id ? { platform: 'RedNote', id, url: `https://www.xiaohongshu.com/user/profile/${id}` } : null
   }
   if (hostIs(host, 'douyin.com') || hostIs(host, 'iesdouyin.com')) {
     const id = /^\/(?:share\/)?user\/([\w-]{20,120})(?:\/|$)/.exec(url.pathname)?.[1]
-    return id ? { platform: '抖音', id, url: `https://www.douyin.com/user/${id}` } : null
+    return id ? { platform: 'Douyin', id, url: `https://www.douyin.com/user/${id}` } : null
   }
   if (host === 'space.bilibili.com' || host === 'm.bilibili.com') {
     const id = /^\/(?:space\/)?(\d{1,20})(?:\/|$)/.exec(url.pathname)?.[1]
-    return id ? { platform: 'B站', id, url: `https://space.bilibili.com/${id}` } : null
+    return id ? { platform: 'Bilibili', id, url: `https://space.bilibili.com/${id}` } : null
   }
   if (hostIs(host, 'tiktok.com')) {
     const id = /^\/@([\w.]{2,24})(?:\/|$)/.exec(url.pathname)?.[1]
@@ -125,8 +125,8 @@ export function parseAccountUrl(raw) {
 /** 粘贴的内容可能是短链，跟着跳转找到主页。只跟这几个平台的短链，每一跳都检查不是内网。 */
 export async function resolveAccount(text, fetchImpl = fetch) {
   const first = findUrl(text)
-  if (!first) throw Object.assign(new Error(tr('没找到链接，请贴账号主页的链接')), { status: 400 })
-  const unsupported = () => Object.assign(new Error(tr('认不出这个主页。目前支持小红书、抖音、B 站、TikTok、Instagram 和 X 的账号主页链接，别的平台可以贴内容来提炼风格。')), { status: 400 })
+  if (!first) throw Object.assign(new Error(tr('No link found. Paste the URL of the account\'s profile page.')), { status: 400 })
+  const unsupported = () => Object.assign(new Error(tr('This profile link isn\'t recognized. TikTok, Instagram, X, RedNote, Douyin and Bilibili profiles are supported. For other platforms, paste your posts to learn a style.')), { status: 400 })
   let current = first
   for (let hop = 0; hop < 4; hop += 1) {
     const account = parseAccountUrl(current)
@@ -139,7 +139,7 @@ export async function resolveAccount(text, fetchImpl = fetch) {
     if (!location) break
     current = new URL(location, current).toString()
   }
-  throw Object.assign(new Error(tr('这个链接打开后不是账号主页。请到账号主页再复制一次链接。')), { status: 400 })
+  throw Object.assign(new Error(tr('This link doesn\'t lead to an account profile. Open the profile page and copy its link again.')), { status: 400 })
 }
 
 function text(value, max) {
@@ -166,32 +166,32 @@ function firstLine(value, fallback) {
 }
 
 function assertOk(platform, output) {
-  const failed = platform === '抖音' || platform === 'TikTok' ? output?.status_code !== 0
+  const failed = platform === 'Douyin' || platform === 'TikTok' ? output?.status_code !== 0
     : platform === 'Instagram' ? !Array.isArray(output?.items ?? output?.data?.items)
       : platform === 'X' ? !Array.isArray(output?.timeline)
         : output?.code !== 0 && output?.code !== 200 && output?.success !== true
-  if (failed) throw new Error(text(output?.status_msg ?? output?.msg ?? output?.message, 120) || tr('平台没有返回内容'))
+  if (failed) throw new Error(text(output?.status_msg ?? output?.msg ?? output?.message, 120) || tr('The platform returned nothing'))
 }
 
 /** 第三方接口的返回不可信：只取用得到的字段，并限制长度。 */
 export function normalizePosts(platform, output) {
   assertOk(platform, output)
-  if (platform === '小红书') {
+  if (platform === 'RedNote') {
     return (output?.data?.notes ?? []).filter(row => /^[0-9a-f]{24}$/i.test(row?.id ?? '')).map((row) => {
       const body = text(row.desc, 2000)
       return {
-        id: row.id, title: text(row.title || row.display_title, 80) || firstLine(body, tr('无标题')), body, publishedAt: isoFromSeconds(row.create_time),
+        id: row.id, title: text(row.title || row.display_title, 80) || firstLine(body, tr('Untitled')), body, publishedAt: isoFromSeconds(row.create_time),
         url: `https://www.xiaohongshu.com/explore/${row.id}`, cover: httpsUrl(row.images_list?.[0]?.url_size_large ?? row.images_list?.[0]?.url),
         views: count(row.view_count), likes: count(row.likes), comments: count(row.comments_count), saves: count(row.collected_count), shares: count(row.share_count),
       }
     })
   }
-  if (platform === '抖音') {
+  if (platform === 'Douyin') {
     return (output?.aweme_list ?? []).filter(row => /^\d+$/.test(row?.aweme_id ?? '')).map((row) => {
       const stat = row.statistics ?? {}
       const body = text(row.desc, 2000)
       return {
-        id: row.aweme_id, title: firstLine(body, tr('无标题')), body, publishedAt: isoFromSeconds(row.create_time),
+        id: row.aweme_id, title: firstLine(body, tr('Untitled')), body, publishedAt: isoFromSeconds(row.create_time),
         url: `https://www.douyin.com/video/${row.aweme_id}`, cover: httpsUrl(row.video?.cover?.url_list?.[0]),
         views: count(stat.play_count), likes: count(stat.digg_count), comments: count(stat.comment_count), saves: count(stat.collect_count), shares: count(stat.share_count),
       }
@@ -203,7 +203,7 @@ export function normalizePosts(platform, output) {
       const body = text(row.desc, 2000)
       const handle = /^[\w.]{2,24}$/.test(row.author?.unique_id ?? '') ? row.author.unique_id : 'tiktok'
       return {
-        id: row.aweme_id, title: firstLine(body, tr('无标题')), body, publishedAt: isoFromSeconds(row.create_time),
+        id: row.aweme_id, title: firstLine(body, tr('Untitled')), body, publishedAt: isoFromSeconds(row.create_time),
         url: `https://www.tiktok.com/@${handle}/video/${row.aweme_id}`, cover: httpsUrl(row.video?.cover?.url_list?.[0] ?? row.video?.origin_cover?.url_list?.[0]),
         views: count(stat.play_count), likes: count(stat.digg_count), comments: count(stat.comment_count), saves: count(stat.collect_count), shares: count(stat.share_count),
       }
@@ -213,7 +213,7 @@ export function normalizePosts(platform, output) {
     return (output?.items ?? output?.data?.items ?? []).filter(row => /^[\w-]{5,40}$/.test(row?.code ?? '')).map((row) => {
       const body = text(row.caption?.text, 2000)
       return {
-        id: row.code, title: firstLine(body, tr('无标题')), body, publishedAt: isoFromSeconds(row.taken_at),
+        id: row.code, title: firstLine(body, tr('Untitled')), body, publishedAt: isoFromSeconds(row.taken_at),
         url: `https://www.instagram.com/p/${row.code}/`, cover: httpsUrl(row.image_versions2?.candidates?.[0]?.url ?? row.carousel_media?.[0]?.image_versions2?.candidates?.[0]?.url),
         views: count(row.ig_play_count ?? row.play_count ?? row.view_count), likes: count(row.like_count), comments: count(row.comment_count), saves: 0, shares: 0,
       }
@@ -226,26 +226,26 @@ export function normalizePosts(platform, output) {
       const at = Date.parse(row.created_at)
       const photo = (row.media ?? []).map(m => m?.media_url_https ?? m?.url).find(Boolean)
       return {
-        id: row.tweet_id, title: firstLine(body, tr('无标题')), body, publishedAt: Number.isFinite(at) ? new Date(at).toISOString() : new Date().toISOString(),
+        id: row.tweet_id, title: firstLine(body, tr('Untitled')), body, publishedAt: Number.isFinite(at) ? new Date(at).toISOString() : new Date().toISOString(),
         url: `https://x.com/${screen}/status/${row.tweet_id}`, cover: httpsUrl(photo),
         views: count(Number(row.views)), likes: count(row.favorites), comments: count(row.replies), saves: count(row.bookmarks), shares: count(row.retweets) + count(row.quotes),
       }
     })
   }
   return (output?.data?.list?.vlist ?? []).filter(row => /^BV\w+$/.test(row?.bvid ?? '')).map(row => ({
-    id: row.bvid, title: text(row.title, 80) || tr('无标题'), body: text(row.description, 2000), publishedAt: isoFromSeconds(row.created),
+    id: row.bvid, title: text(row.title, 80) || tr('Untitled'), body: text(row.description, 2000), publishedAt: isoFromSeconds(row.created),
     url: `https://www.bilibili.com/video/${row.bvid}`, cover: httpsUrl(row.pic),
     views: count(row.play), likes: 0, comments: count(row.comment), saves: 0, shares: 0,
   }))
 }
 
 export function normalizeProfile(platform, { profile, relation }) {
-  if (platform === '小红书') {
+  if (platform === 'RedNote') {
     const data = profile?.data ?? {}
     const fans = (data.interactions ?? []).find(row => row?.type === 'fans')?.count ?? data.fans
     return { nickname: text(data.nickname, 40), description: text(data.desc, 300), followers: count(fans) }
   }
-  if (platform === '抖音') {
+  if (platform === 'Douyin') {
     const user = profile?.user ?? {}
     return { nickname: text(user.nickname, 40), description: text(user.signature, 300), followers: count(user.follower_count) }
   }
@@ -323,8 +323,8 @@ export function createMonidRunner(exec = execFile, locate = createLocator(exec))
       exec(found.bin, args, { timeout: timeoutSeconds * 1000, maxBuffer: MAX_OUTPUT, env: { ...process.env, PATH: found.path, NO_COLOR: '1' } }, (err, stdout, stderr) => {
         const parsed = parseOutput(stdout)
         if (parsed) return resolve(parsed)
-        if (err) return reject(new Error(text(String(stderr ?? '') || err.message, 200) || tr('Monid 命令运行失败')))
-        return reject(new Error(tr('Monid 返回的内容看不懂，可以先升级一下命令行')))
+        if (err) return reject(new Error(text(String(stderr ?? '') || err.message, 200) || tr('The Monid command failed')))
+        return reject(new Error(tr('Couldn\'t read what Monid returned. Try updating the Monid CLI.')))
       })
     })
   }
@@ -345,13 +345,13 @@ export async function monidStatus(run) {
 
 async function runEndpoint(run, endpoint, query) {
   const data = await run(['run', '-p', 'tikhub', '-e', endpoint, '--query', JSON.stringify(query), '-w', String(RUN_WAIT_SECONDS), '-j'], RUN_WAIT_SECONDS + 30)
-  if (data === null) throw Object.assign(new Error(tr('还没装好 Monid')), { status: 400 })
+  if (data === null) throw Object.assign(new Error(tr('Monid isn\'t installed yet')), { status: 400 })
   if (data.error) {
     const authFailed = data.error.code === 'AUTH_FAILED'
-    throw Object.assign(new Error(authFailed ? tr('Monid 还没配置密钥') : tr('Monid：{message}', { message: text(data.error.message, 160) })), { status: authFailed ? 400 : 502 })
+    throw Object.assign(new Error(authFailed ? tr('Monid doesn\'t have an API key yet') : tr('Monid：{message}', { message: text(data.error.message, 160) })), { status: authFailed ? 400 : 502 })
   }
-  if (data.status === 'BLOCKED') throw Object.assign(new Error(tr('这次导入被 Monid 后台的预算限制拦下了，可以到 app.monid.ai 调整后再试')), { status: 402 })
-  if (data.status !== 'COMPLETED') throw Object.assign(new Error(tr('Monid 这次没跑完（{status}）', { status: text(data.status, 20) || tr('未知状态') })), { status: 502 })
+  if (data.status === 'BLOCKED') throw Object.assign(new Error(tr('Monid\'s budget limit blocked this import. Adjust it at app.monid.ai and try again.')), { status: 402 })
+  if (data.status !== 'COMPLETED') throw Object.assign(new Error(tr('Monid didn\'t finish this run ({status})', { status: text(data.status, 20) || tr('unknown status') })), { status: 502 })
   return { output: data.output, cost: Number.isFinite(data.cost?.value) ? data.cost.value : 0 }
 }
 
@@ -371,7 +371,7 @@ export async function fetchAccount(account, run) {
   const posts = await runEndpoint(run, source.calls.posts, source.query(account.id, 'posts', extras.profile))
   cost += posts.cost
   const list = normalizePosts(account.platform, posts.output)
-  if (!list.length) throw Object.assign(new Error(tr('没抓到内容，账号可能是私密的或者还没发过内容。')), { status: 404, cost })
+  if (!list.length) throw Object.assign(new Error(tr('No posts found. The account may be private or hasn\'t posted yet.')), { status: 404, cost })
   if (account.platform === 'X') extras.profile = posts.output?.user
   for (const kind of ['profile', 'relation']) {
     if (extras[kind]) continue

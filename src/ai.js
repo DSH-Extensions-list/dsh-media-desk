@@ -25,7 +25,7 @@ export function modelInfo(ctx) {
  */
 export async function callModel(ctx, { system, user, maxTokens = 4000, signal, onText, light = false }) {
   const info = modelInfo(ctx)
-  if (!info) throw new Error(tr('当前没有可用模型'))
+  if (!info) throw new Error(tr('No model is available'))
   const llm = ctx.get('llm')
   try {
     const call = await llm.prepareCall(
@@ -47,7 +47,7 @@ export async function callModel(ctx, { system, user, maxTokens = 4000, signal, o
         text += chunk.text
         onText?.(chunk.text)
       } else if (chunk.type === 'finish' && ['error', 'aborted'].includes(chunk.reason?.kind)) {
-        throw new Error(chunk.reason.failure?.message || tr('模型调用失败'))
+        throw new Error(chunk.reason.failure?.message || tr('The model call failed'))
       }
     }
     modelStatus.ok = true
@@ -66,7 +66,7 @@ export function extractJson(text) {
   const body = fenced ? fenced[1] : text
   const start = body.search(/[{[]/)
   const end = Math.max(body.lastIndexOf('}'), body.lastIndexOf(']'))
-  if (start < 0 || end < start) throw new Error(tr('模型没有返回 JSON'))
+  if (start < 0 || end < start) throw new Error(tr('The model did not return JSON'))
   return JSON.parse(body.slice(start, end + 1))
 }
 
@@ -218,7 +218,7 @@ export function shortCoverText(title, max = 12) {
 export function fallbackPlan(item, article, settings) {
   const headings = [...article.matchAll(/^##\s+(.+)$/gm)].map(m => m[1].trim())
   const beats = byLang(['开场抓人的画面', '人物遇到的处境', '细节特写', '转折的瞬间', '方法或答案', '回到开场的画面', '结尾留下的问题'], ['A gripping opening image', 'The situation the person is in', 'A close detail', 'The turning point', 'The method or the answer', 'Back to the opening image', 'The question left at the end'])
-  const sizes = byLang(['特写', '中景', '近景', '全景', '中景', '近景', '特写'], ['Close-up', 'Medium', 'Close', 'Wide', 'Medium', 'Close', 'Close-up'])
+  const sizes = byLang(['Close-up', 'Medium shot', 'Medium close-up', 'Wide shot', 'Medium shot', 'Medium close-up', 'Close-up'], ['Close-up', 'Medium', 'Close', 'Wide', 'Medium', 'Close', 'Close-up'])
   return {
     title: item.title,
     coverText: shortCoverText(item.title),

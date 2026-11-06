@@ -80,7 +80,7 @@ export function Card({ item: raw, onOpen }) {
       <footer className="md-card-foot">
         <span className={`md-dot status-${item.status}`} title={t(STATUS_LABEL[item.status])} />
         <span className="md-card-source">{item.kind === 'web' && item.url ? hostOf(item.url) : item.source || t(KIND_LABEL[item.kind])}</span>
-        <span className="md-card-time">{running ? <span className="md-shimmer">{t('正在成稿')}</span> : item.production?.status === 'done' ? t('已成稿') : item.scheduledAt && item.status !== 'published' ? relativeDay(item.scheduledAt) : ''}</span>
+        <span className="md-card-time">{running ? <span className="md-shimmer">{t('Drafting')}</span> : item.production?.status === 'done' ? t('Drafted') : item.scheduledAt && item.status !== 'published' ? relativeDay(item.scheduledAt) : ''}</span>
       </footer>
     </article>
   )

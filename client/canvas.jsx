@@ -89,31 +89,31 @@ function Hero() {
     // 记下的同时，把提到同一件事的旧灵感拉到眼前
     const ids = relatedIdeas(roots, value)
     setDesk({ related: ids.length ? { query: value, ids, newId: null } : null })
-    await dispatchOps([{ op: 'add_item', kind: 'note', title: value.split(/[。！？\n]|[.!?](?=\s|$)/)[0].slice(0, 60), body: value.length > 60 ? value : '' }], { label: t('记下灵感') })
+    await dispatchOps([{ op: 'add_item', kind: 'note', title: value.split(/[。！？\n]|[.!?](?=\s|$)/)[0].slice(0, 60), body: value.length > 60 ? value : '' }], { label: t('Add idea') })
   }
   const now = new Date()
   return (
     <section className="md-hero" onPointerDown={e => e.stopPropagation()}>
-      <p className="md-hero-date">{now.getFullYear()} · {t('{m} 月 {d} 日', { m: now.getMonth() + 1, d: now.getDate(), mon: now.toLocaleString('en-US', { month: 'short' }) })} · {t(WEEKDAYS[now.getDay()])}</p>
+      <p className="md-hero-date">{now.getFullYear()} · {t('{mon} {d}', { m: now.getMonth() + 1, d: now.getDate(), mon: now.toLocaleString('en-US', { month: 'short' }) })} · {t(WEEKDAYS[now.getDay()])}</p>
       <h1 className="md-hero-line">
-        {t('还有')} <Inline src={pic(pending)} /> <b>{t('{n} 个灵感', { n: pending.length, s: plural(pending.length, '', 's') })}</b> {t('等你成稿，')}
+        {t('')} <Inline src={pic(pending)} /> <b>{t('{n} idea{s}', { n: pending.length, s: plural(pending.length, '', 's') })}</b> {t('waiting to be drafted,')}
         <br />
-        <Inline src={pic(upcoming)} /> <b>{t('{n} 条内容', { n: upcoming.length, s: plural(upcoming.length, '', 's') })}</b> {t('排在本周，')}
+        <Inline src={pic(upcoming)} /> <b>{t('{n} piece{s}', { n: upcoming.length, s: plural(upcoming.length, '', 's') })}</b> {t('scheduled this week,')}
         <br />
-        {t('你已经连续记录')} <b className="md-hero-streak">{t('{n} 天', { n: streak, s: plural(streak, '', 's') })}</b>{t('。')}
+        {t('and your idea streak is')} <b className="md-hero-streak">{t('{n} day{s}', { n: streak, s: plural(streak, '', 's') })}</b>{t('。')}
       </h1>
       <form className="md-hero-input" onSubmit={submit}>
         <Icon name="spark" size={16} />
-        <input value={text} onChange={e => setText(e.target.value)} placeholder={t('记下一个灵感，或贴一个链接')} aria-label={t('记下灵感')} />
-        <button type="submit" className="md-send" aria-label={t('记下')} disabled={!text.trim()}><Icon name="send" size={15} /></button>
+        <input value={text} onChange={e => setText(e.target.value)} placeholder={t('Capture an idea or paste a link')} aria-label={t('Add idea')} />
+        <button type="submit" className="md-send" aria-label={t('Add')} disabled={!text.trim()}><Icon name="send" size={15} /></button>
       </form>
       {related ? (
         <p className="md-hero-related">
-          <span>{t('找到 {n} 条相关的灵感，放在了旁边', { n: related.ids.length, s: plural(related.ids.length, '', 's') })}</span>
-          <button type="button" className="md-inline-link" onClick={() => setDesk({ related: null })}>{t('放回去')}</button>
+          <span>{t('Pulled {n} related idea{s} in close', { n: related.ids.length, s: plural(related.ids.length, '', 's') })}</span>
+          <button type="button" className="md-inline-link" onClick={() => setDesk({ related: null })}>{t('Put back')}</button>
         </p>
       ) : null}
-      {roots.length === 0 ? <p className="md-hero-hint">{t('写一句话、贴一个链接，或者把图片和视频拖进来。右上角的助手也能替你记。')}</p> : null}
+      {roots.length === 0 ? <p className="md-hero-hint">{t('Type a thought, paste a link, or drop in images and videos. You can also ask the assistant in the top right.')}</p> : null}
       <MiniStamps />
     </section>
   )
@@ -401,9 +401,9 @@ function Scatter() {
         {shown.map((item, index) => <Node key={item.id} item={item} pos={posOf(item)} index={index} entered={entered} onOpen={openCard} tone={toneOf(item)} />)}
       </div>
       <div className="md-toolrow md-toolrow-right" onPointerDown={e => e.stopPropagation()}>
-        <IconButton icon="zoomOut" label={t('缩小')} onClick={() => zoomAt(0.8, ...center(), false)} />
-        <IconButton icon="target" label={t('回到中心')} onClick={() => flyTo(frameHome())} />
-        <IconButton icon="zoomIn" label={t('放大')} onClick={() => zoomAt(1.25, ...center(), false)} />
+        <IconButton icon="zoomOut" label={t('Zoom out')} onClick={() => zoomAt(0.8, ...center(), false)} />
+        <IconButton icon="target" label={t('Recenter')} onClick={() => flyTo(frameHome())} />
+        <IconButton icon="zoomIn" label={t('Zoom in')} onClick={() => zoomAt(1.25, ...center(), false)} />
       </div>
     </div>
   )
@@ -439,9 +439,9 @@ function Feed() {
   )
 }
 
-const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-const KIND_OPTIONS = [{ value: 'all', label: '全部' }, { value: 'image', label: '图片' }, { value: 'video', label: '视频' }, { value: 'web', label: '网页' }, { value: 'quote', label: '金句' }, { value: 'note', label: '笔记' }]
+const KIND_OPTIONS = [{ value: 'all', label: 'All' }, { value: 'image', label: 'Image' }, { value: 'video', label: 'Video' }, { value: 'web', label: 'Web' }, { value: 'quote', label: 'Quote' }, { value: 'note', label: 'Note' }]
 
 export function HomeView() {
   const mode = useDesk(s => s.mode)
@@ -449,12 +449,12 @@ export function HomeView() {
   return (
     <div className="md-home">
       {mode === 'feed' ? <Feed /> : <Scatter />}
-      <div className="md-dockbar" role="toolbar" aria-label={t('灵感视图')}>
+      <div className="md-dockbar" role="toolbar" aria-label={t('Idea layout')}>
         <Segmented
-          label={t('展示方式')}
+          label={t('Layout')}
           value={mode}
           onChange={value => setDesk({ mode: value })}
-          options={[{ value: 'scatter', icon: 'scatter', title: t('散落') }, { value: 'feed', icon: 'wall', title: t('信息流') }]}
+          options={[{ value: 'scatter', icon: 'scatter', title: t('Freeform') }, { value: 'feed', icon: 'wall', title: t('Feed') }]}
         />
         <span className="md-dockbar-sep" />
         <div className="md-chips">
@@ -463,7 +463,7 @@ export function HomeView() {
           ))}
         </div>
         <span className="md-dockbar-sep" />
-        <button type="button" className="md-round is-primary" aria-label={t('记下灵感')} title={t('记下灵感')} onClick={() => openCapture('text')}><Icon name="plus" size={18} /></button>
+        <button type="button" className="md-round is-primary" aria-label={t('Add idea')} title={t('Add idea')} onClick={() => openCapture('text')}><Icon name="plus" size={18} /></button>
       </div>
     </div>
   )
