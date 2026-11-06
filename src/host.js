@@ -13,6 +13,7 @@ import { computeInsights, exportSkill, proposeRules } from './learn.js'
 import { createMonidRunner, fetchAccount, importPosts, monidStatus, postsToMaterial, resolveAccount, saveCovers } from './monid.js'
 import { applyOps, newId } from './ops.js'
 import { applyRevision, Producer } from './produce.js'
+import { fetchRedditFeed, parseRedditSource } from './reddit.js'
 import { publicSettings, Settings, imageReady } from './settings.js'
 import { normalizeStyle, stylePrompts } from './style.js'
 import { dshHome, Store } from './store.js'
@@ -209,27 +210,57 @@ async function styleFromMaterial(ctx, store, { material, name, source, sourceUrl
   })
 }
 
-/** Import the user's own account. Monid charges per request, so save the content first: a failed style extraction still leaves the import worth the spend. */
+/** Learn a style from an imported account without letting a model failure undo the import. */
+async function learnImportedStyle(ctx, store, { account, profile, posts }) {
+  const nickname = profile.nickname || account.platform
+  const material = postsToMaterial(posts)
+  if (material.length < 80) return { nickname, styleError: tr('This account doesn\'t have enough text to learn a style from.') }
+  try {
+    await styleFromMaterial(ctx, store, { material, name: nickname, source: tr('{platform} account', { platform: account.platform }), sourceUrls: [account.url], accountKey: `${account.platform}:${account.id}` })
+    return { nickname, styleError: null }
+  } catch (err) {
+    return { nickname, styleError: err.message }
+  }
+}
+
+/** Reddit is free: try its JSON API for scores and comment counts, fall back to the Atom feed,
+ * save the content and the account row, and skip Monid, cost checks and cover downloads. */
+async function importRedditAccount(ctx, store, source) {
+  const { posts, via } = await fetchRedditFeed(source)
+  if (!posts.length) {
+    throw Object.assign(new Error(source.kind === 'subreddit'
+      ? tr('No posts found in this subreddit. It may be private or have no public posts.')
+      : tr('No posts found on this Reddit profile. The account may be new, private, or have no public submissions.')), { status: 404 })
+  }
+  const handle = `${source.kind === 'subreddit' ? 'r' : 'u'}/${source.id}`
+  const profile = { nickname: handle, description: '', followers: null }
+  const account = { platform: 'Reddit', id: handle, url: source.url }
+  // Only the JSON API carries real numbers, and a subreddit's scores belong to its posters rather
+  // than to the account being imported, so only a JSON user import writes metric rows.
+  const withMetrics = source.kind === 'user' && via === 'json'
+  const imported = withMetrics
+    ? posts.map(post => ({ ...post, views: 0, likes: post.score, comments: post.comments, shares: 0, saves: 0 }))
+    : posts
+  const added = await store.mutate(tr('Import {platform} account', { platform: account.platform }), draft => importPosts(draft, { account, profile, posts: imported, withMetrics }).added)
+  const { nickname, styleError } = await learnImportedStyle(ctx, store, { account, profile, posts })
+  return { platform: account.platform, kind: source.kind, via, nickname, count: posts.length, added, cost: 0, styleName: styleError ? null : nickname, styleError, state: await store.read() }
+}
+
+/** Import an account or subreddit. Reddit uses its free JSON API or public feed; Instagram and X go
+ * through Monid, which charges per request, so save the content first: a failed style extraction
+ * still leaves the import worth the spend. */
 async function importAccountRoute(ctx, store, desk, body) {
   if (desk.importing) throw Object.assign(new Error(tr('Another account is still importing. Try again when it finishes.')), { status: 409 })
   desk.importing = true
   try {
-    const account = await resolveAccount(body.text)
+    const text = String(body.text ?? '')
+    const reddit = parseRedditSource(text)
+    if (reddit) return await importRedditAccount(ctx, store, reddit)
+    const account = await resolveAccount(text)
     const { posts, profile, cost } = await fetchAccount(account, desk.monid)
     const covers = await saveCovers(posts, account.platform, await store.read(), store.filesDir)
     const added = await store.mutate(tr('Import {platform} account', { platform: account.platform }), draft => importPosts(draft, { account, profile, posts, covers }).added)
-    const nickname = profile.nickname || account.platform
-    let styleError = null
-    const material = postsToMaterial(posts)
-    if (material.length >= 80) {
-      try {
-        await styleFromMaterial(ctx, store, { material, name: nickname, source: tr('{platform} account', { platform: account.platform }), sourceUrls: [account.url], accountKey: `${account.platform}:${account.id}` })
-      } catch (err) {
-        styleError = err.message
-      }
-    } else {
-      styleError = tr('This account doesn\'t have enough text to learn a style from.')
-    }
+    const { nickname, styleError } = await learnImportedStyle(ctx, store, { account, profile, posts })
     return { platform: account.platform, nickname, count: posts.length, added, cost, styleName: styleError ? null : nickname, styleError, state: await store.read() }
   } finally {
     desk.importing = false

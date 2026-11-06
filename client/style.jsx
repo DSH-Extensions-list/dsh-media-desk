@@ -35,7 +35,7 @@ function AddStyleDialog({ initialTab, onClose, onConnect }) {
           <label className="md-field">
             <span>{t('Link')}</span>
             <textarea rows={4} required value={urls} onChange={e => setUrls(e.target.value)} placeholder={t('Links to posts you published\nOne per line, up to 5')} />
-            <small>{t('Only public pages can be read. Social platforms like TikTok, Instagram and X require sign-in, so ')}<button type="button" className="md-inline-link" onClick={onConnect}>{t('import your account instead')}</button>.</small>
+            <small>{t('Instagram and X need a signed-in session, so ')}<button type="button" className="md-inline-link" onClick={onConnect}>{t('import your account instead')}</button>{t('; Reddit posts can be read from their public feed.')}</small>
           </label>
         )}
         <label className="md-field">

@@ -5,7 +5,7 @@ import { fmtWhen, STATUSES } from './ops.js'
 
 const WEEK_EN = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 }
 const MONTH_EN = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
-const PLATFORM_WORDS = { 'wechat channels': 'WeChat Channels', wechat: 'WeChat', xiaohongshu: 'RedNote', rednote: 'RedNote', douyin: 'Douyin', bilibili: 'Bilibili', channels: 'WeChat Channels', tiktok: 'TikTok', instagram: 'Instagram', ig: 'Instagram', youtube: 'YouTube', twitter: 'X' }
+const PLATFORM_WORDS = { instagram: 'Instagram', ig: 'Instagram', twitter: 'X', x: 'X', reddit: 'Reddit', r: 'Reddit' }
 
 /** Dates and times in English: tomorrow 8pm, next wed, Nov 3 20:00, in 3 days. */
 export function parseWhen(text, now = new Date()) {
@@ -123,8 +123,8 @@ export function localIntent(state, message, { focusId, now = new Date() } = {}) 
     const when = parseWhen(text, now)
     if (!when) return { reply: tr('I couldn\'t find a time. Try "tomorrow 8pm" or "Nov 3 20:00".'), ops: [] }
     if (!item) return { reply: tr('Which piece should I schedule? Put its title in quotes.'), ops: [] }
-    const word = /\b(wechat channels|wechat|xiaohongshu|rednote|douyin|bilibili|channels|tiktok|instagram|ig|youtube|twitter)\b/i.exec(text)?.[1]?.replace(/\s+/g, ' ')
-    const platform = word ? PLATFORM_WORDS[word.toLowerCase()] : ['WeChat', 'RedNote', 'Douyin', 'Bilibili', 'WeChat Channels', 'TikTok', 'Instagram', 'YouTube', 'X'].find(p => p.length > 1 && text.toLowerCase().includes(p.toLowerCase())) ?? (/\bon X\b/.test(text) ? 'X' : undefined)
+    const word = /\b(instagram|ig|twitter|x|reddit|r)\b/i.exec(text)?.[1]?.replace(/\s+/g, ' ')
+    const platform = word ? PLATFORM_WORDS[word.toLowerCase()] : ['Instagram', 'X', 'Reddit'].find(p => p.length > 1 && text.toLowerCase().includes(p.toLowerCase()))
     return { reply: tr('Scheduled.'), ops: [{ op: 'schedule_item', id: item.id, scheduledAt: when.toISOString(), ...(platform ? { platform } : {}) }] }
   }
   if (/\b(?:write|turn|make|produce|draft)\b.*\b(?:script|article|post|storyboard|figures?)\b|^(?:produce|write)(?: it| this)?\b|\bstoryboard\b/i.test(text)) {

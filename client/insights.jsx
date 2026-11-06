@@ -81,7 +81,7 @@ function addMetric(items) {
   setDesk({
     dialog: {
       title: t('Add stats'),
-      initial: { platform: 'WeChat', date: dayKey(new Date()) },
+      initial: { platform: 'Instagram', date: dayKey(new Date()) },
       fields: [
         { name: 'itemId', label: t('Piece'), type: 'select', options: [{ value: '', label: t('None') }, ...items.filter(i => !i.parentId).map(i => ({ value: i.id, label: displayItem(i).title.slice(0, 26) }))] },
         { name: 'platform', label: t('Platform'), type: 'select', options: platformChoices().map(v => ({ value: v, label: t(v) })) },
@@ -129,7 +129,7 @@ function importCsv() {
     dialog: {
       title: t('Paste CSV'),
       submitLabel: t('Import'),
-      fields: [{ name: 'csv', label: t('One row per post: date, platform, views, likes, comments, shares, saves'), type: 'textarea', rows: 7, required: true, placeholder: t('2026-10-30,WeChat,3200,120,18,40,66') }],
+      fields: [{ name: 'csv', label: t('One row per post: date, platform, views, likes, comments, shares, saves'), type: 'textarea', rows: 7, required: true, placeholder: t('2026-10-30,Instagram,3200,120,18,40,66') }],
       onSubmit: (values) => {
         const { ops, errors } = parseCsv(values.csv ?? '')
         const done = count(ops.length, 'Imported 1 row', 'Imported {n} rows')

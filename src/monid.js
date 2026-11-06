@@ -14,41 +14,11 @@ const RUN_WAIT_SECONDS = 120
 const MAX_OUTPUT = 64 * 1024 * 1024
 const COVER_MAX_BYTES = 8 * 1024 * 1024
 const COVER_CONCURRENCY = 4
-const SHORT_HOSTS = ['xhslink.com', 'v.douyin.com', 'b23.tv', 'vm.tiktok.com', 'vt.tiktok.com']
 
 export const MONID_SKILL_URL = 'https://monid.ai/SKILL.md'
 
 // Keyed by the stored platform value, which is the English platform name.
 const SOURCES = {
-  RedNote: {
-    query: id => ({ user_id: id }),
-    calls: {
-      posts: '/api/v1/xiaohongshu/app_v2/get_user_posted_notes',
-      profile: '/api/v1/xiaohongshu/app_v2/get_user_info',
-    },
-  },
-  Douyin: {
-    query: (id, kind) => (kind === 'posts' ? { sec_user_id: id, count: POST_COUNT } : { sec_user_id: id }),
-    calls: {
-      posts: '/api/v1/douyin/app/v3/fetch_user_post_videos',
-      profile: '/api/v1/douyin/app/v3/handler_user_profile',
-    },
-  },
-  Bilibili: {
-    query: (id, kind) => (kind === 'posts' ? { uid: id, ps: POST_COUNT } : { uid: id }),
-    calls: {
-      posts: '/api/v1/bilibili/web/fetch_user_post_videos',
-      profile: '/api/v1/bilibili/web/fetch_user_profile',
-      relation: '/api/v1/bilibili/web/fetch_user_relation_stat',
-    },
-  },
-  TikTok: {
-    query: (id, kind) => (kind === 'posts' ? { unique_id: id, count: POST_COUNT } : { unique_id: id }),
-    calls: {
-      posts: '/api/v1/tiktok/app/v3/fetch_user_post_videos',
-      profile: '/api/v1/tiktok/app/v3/handler_user_profile',
-    },
-  },
   // Instagram needs a numeric user id first, which is looked up from the username, before posts can be read
   Instagram: {
     profileFirst: true,
@@ -98,22 +68,6 @@ export function parseAccountUrl(raw) {
   }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return null
   const host = url.hostname.toLowerCase()
-  if (hostIs(host, 'xiaohongshu.com')) {
-    const id = /^\/user\/profile\/([0-9a-f]{24})(?:\/|$)/i.exec(url.pathname)?.[1]
-    return id ? { platform: 'RedNote', id, url: `https://www.xiaohongshu.com/user/profile/${id}` } : null
-  }
-  if (hostIs(host, 'douyin.com') || hostIs(host, 'iesdouyin.com')) {
-    const id = /^\/(?:share\/)?user\/([\w-]{20,120})(?:\/|$)/.exec(url.pathname)?.[1]
-    return id ? { platform: 'Douyin', id, url: `https://www.douyin.com/user/${id}` } : null
-  }
-  if (host === 'space.bilibili.com' || host === 'm.bilibili.com') {
-    const id = /^\/(?:space\/)?(\d{1,20})(?:\/|$)/.exec(url.pathname)?.[1]
-    return id ? { platform: 'Bilibili', id, url: `https://space.bilibili.com/${id}` } : null
-  }
-  if (hostIs(host, 'tiktok.com')) {
-    const id = /^\/@([\w.]{2,24})(?:\/|$)/.exec(url.pathname)?.[1]
-    return id ? { platform: 'TikTok', id, url: `https://www.tiktok.com/@${id}` } : null
-  }
   if (hostIs(host, 'instagram.com')) {
     const id = /^\/([\w.]{1,30})\/?$/.exec(url.pathname)?.[1]
     return id && !RESERVED.Instagram.has(id.toLowerCase()) ? { platform: 'Instagram', id, url: `https://www.instagram.com/${id}/` } : null
@@ -125,25 +79,14 @@ export function parseAccountUrl(raw) {
   return null
 }
 
-/** Pasted text may hold a short link, so follow the redirects to the profile. Only follow short links
- * for these platforms, and check every hop is not a private-network address. */
-export async function resolveAccount(text, fetchImpl = fetch) {
+/** Read the platform and account id out of pasted text. Reddit profiles are recognised by reddit.js
+ * before this runs; this function covers the two Monid platforms. */
+export async function resolveAccount(text) {
   const first = findUrl(text)
   if (!first) throw Object.assign(new Error(tr('No link found. Paste the URL of the account\'s profile page.')), { status: 400 })
-  const unsupported = () => Object.assign(new Error(tr('This profile link isn\'t recognized. TikTok, Instagram, X, RedNote, Douyin and Bilibili profiles are supported. For other platforms, paste your posts to learn a style.')), { status: 400 })
-  let current = first
-  for (let hop = 0; hop < 4; hop += 1) {
-    const account = parseAccountUrl(current)
-    if (account) return account
-    const url = new URL(current)
-    if (!SHORT_HOSTS.some(name => hostIs(url.hostname.toLowerCase(), name)) && hop === 0) throw unsupported()
-    await assertPublicUrl(current)
-    const res = await fetchImpl(current, { method: 'GET', redirect: 'manual', signal: AbortSignal.timeout(10_000), headers: { 'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148' } })
-    const location = res.headers.get('location')
-    if (!location) break
-    current = new URL(location, current).toString()
-  }
-  throw Object.assign(new Error(tr('This link doesn\'t lead to an account profile. Open the profile page and copy its link again.')), { status: 400 })
+  const account = parseAccountUrl(first)
+  if (account) return account
+  throw Object.assign(new Error(tr('This profile link isn\'t recognized. Instagram, X and Reddit profiles are supported. For other platforms, paste your posts to learn a style.')), { status: 400 })
 }
 
 function text(value, max) {
@@ -170,49 +113,16 @@ function firstLine(value, fallback) {
 }
 
 function assertOk(platform, output) {
-  const failed = platform === 'Douyin' || platform === 'TikTok' ? output?.status_code !== 0
-    : platform === 'Instagram' ? !Array.isArray(output?.items ?? output?.data?.items)
-      : platform === 'X' ? !Array.isArray(output?.timeline)
-        : output?.code !== 0 && output?.code !== 200 && output?.success !== true
+  const failed = platform === 'Instagram'
+    ? !Array.isArray(output?.items ?? output?.data?.items)
+    : !Array.isArray(output?.timeline)
   if (failed) throw new Error(text(output?.status_msg ?? output?.msg ?? output?.message, 120) || tr('The platform returned nothing'))
 }
 
 /** Third-party responses are untrusted: keep only the fields we use and cap their length. */
 export function normalizePosts(platform, output) {
+  if (platform !== 'Instagram' && platform !== 'X') return []
   assertOk(platform, output)
-  if (platform === 'RedNote') {
-    return (output?.data?.notes ?? []).filter(row => /^[0-9a-f]{24}$/i.test(row?.id ?? '')).map((row) => {
-      const body = text(row.desc, 2000)
-      return {
-        id: row.id, title: text(row.title || row.display_title, 80) || firstLine(body, tr('Untitled')), body, publishedAt: isoFromSeconds(row.create_time),
-        url: `https://www.xiaohongshu.com/explore/${row.id}`, cover: httpsUrl(row.images_list?.[0]?.url_size_large ?? row.images_list?.[0]?.url),
-        views: count(row.view_count), likes: count(row.likes), comments: count(row.comments_count), saves: count(row.collected_count), shares: count(row.share_count),
-      }
-    })
-  }
-  if (platform === 'Douyin') {
-    return (output?.aweme_list ?? []).filter(row => /^\d+$/.test(row?.aweme_id ?? '')).map((row) => {
-      const stat = row.statistics ?? {}
-      const body = text(row.desc, 2000)
-      return {
-        id: row.aweme_id, title: firstLine(body, tr('Untitled')), body, publishedAt: isoFromSeconds(row.create_time),
-        url: `https://www.douyin.com/video/${row.aweme_id}`, cover: httpsUrl(row.video?.cover?.url_list?.[0]),
-        views: count(stat.play_count), likes: count(stat.digg_count), comments: count(stat.comment_count), saves: count(stat.collect_count), shares: count(stat.share_count),
-      }
-    })
-  }
-  if (platform === 'TikTok') {
-    return (output?.aweme_list ?? []).filter(row => /^\d+$/.test(row?.aweme_id ?? '')).map((row) => {
-      const stat = row.statistics ?? {}
-      const body = text(row.desc, 2000)
-      const handle = /^[\w.]{2,24}$/.test(row.author?.unique_id ?? '') ? row.author.unique_id : 'tiktok'
-      return {
-        id: row.aweme_id, title: firstLine(body, tr('Untitled')), body, publishedAt: isoFromSeconds(row.create_time),
-        url: `https://www.tiktok.com/@${handle}/video/${row.aweme_id}`, cover: httpsUrl(row.video?.cover?.url_list?.[0] ?? row.video?.origin_cover?.url_list?.[0]),
-        views: count(stat.play_count), likes: count(stat.digg_count), comments: count(stat.comment_count), saves: count(stat.collect_count), shares: count(stat.share_count),
-      }
-    })
-  }
   if (platform === 'Instagram') {
     return (output?.items ?? output?.data?.items ?? []).filter(row => /^[\w-]{5,40}$/.test(row?.code ?? '')).map((row) => {
       const body = text(row.caption?.text, 2000)
@@ -223,40 +133,20 @@ export function normalizePosts(platform, output) {
       }
     })
   }
-  if (platform === 'X') {
-    const screen = /^\w{1,15}$/.test(output?.user?.profile ?? '') ? output.user.profile : 'i'
-    return (output?.timeline ?? []).filter(row => /^\d+$/.test(row?.tweet_id ?? '')).map((row) => {
-      const body = text(row.text, 2000)
-      const at = Date.parse(row.created_at)
-      const photo = (row.media ?? []).map(m => m?.media_url_https ?? m?.url).find(Boolean)
-      return {
-        id: row.tweet_id, title: firstLine(body, tr('Untitled')), body, publishedAt: Number.isFinite(at) ? new Date(at).toISOString() : new Date().toISOString(),
-        url: `https://x.com/${screen}/status/${row.tweet_id}`, cover: httpsUrl(photo),
-        views: count(Number(row.views)), likes: count(row.favorites), comments: count(row.replies), saves: count(row.bookmarks), shares: count(row.retweets) + count(row.quotes),
-      }
-    })
-  }
-  return (output?.data?.list?.vlist ?? []).filter(row => /^BV\w+$/.test(row?.bvid ?? '')).map(row => ({
-    id: row.bvid, title: text(row.title, 80) || tr('Untitled'), body: text(row.description, 2000), publishedAt: isoFromSeconds(row.created),
-    url: `https://www.bilibili.com/video/${row.bvid}`, cover: httpsUrl(row.pic),
-    views: count(row.play), likes: 0, comments: count(row.comment), saves: 0, shares: 0,
-  }))
+  const screen = /^\w{1,15}$/.test(output?.user?.profile ?? '') ? output.user.profile : 'i'
+  return (output?.timeline ?? []).filter(row => /^\d+$/.test(row?.tweet_id ?? '')).map((row) => {
+    const body = text(row.text, 2000)
+    const at = Date.parse(row.created_at)
+    const photo = (row.media ?? []).map(m => m?.media_url_https ?? m?.url).find(Boolean)
+    return {
+      id: row.tweet_id, title: firstLine(body, tr('Untitled')), body, publishedAt: Number.isFinite(at) ? new Date(at).toISOString() : new Date().toISOString(),
+      url: `https://x.com/${screen}/status/${row.tweet_id}`, cover: httpsUrl(photo),
+      views: count(Number(row.views)), likes: count(row.favorites), comments: count(row.replies), saves: count(row.bookmarks), shares: count(row.retweets) + count(row.quotes),
+    }
+  })
 }
 
-export function normalizeProfile(platform, { profile, relation }) {
-  if (platform === 'RedNote') {
-    const data = profile?.data ?? {}
-    const fans = (data.interactions ?? []).find(row => row?.type === 'fans')?.count ?? data.fans
-    return { nickname: text(data.nickname, 40), description: text(data.desc, 300), followers: count(fans) }
-  }
-  if (platform === 'Douyin') {
-    const user = profile?.user ?? {}
-    return { nickname: text(user.nickname, 40), description: text(user.signature, 300), followers: count(user.follower_count) }
-  }
-  if (platform === 'TikTok') {
-    const user = profile?.user ?? {}
-    return { nickname: text(user.nickname, 40), description: text(user.signature, 300), followers: count(user.follower_count) }
-  }
+export function normalizeProfile(platform, { profile } = {}) {
   if (platform === 'Instagram') {
     const user = profile?.data?.user ?? {}
     return { nickname: text(user.full_name || user.username, 40), description: text(user.biography, 300), followers: count(user.edge_followed_by?.count ?? user.follower_count) }
@@ -265,8 +155,7 @@ export function normalizeProfile(platform, { profile, relation }) {
     const user = profile ?? {}
     return { nickname: text(user.name, 40), description: text(user.desc, 300), followers: count(user.sub_count ?? user.followers_count) }
   }
-  const data = profile?.data ?? {}
-  return { nickname: text(data.name, 40), description: text(data.sign, 300), followers: count(relation?.follower ?? relation?.data?.follower) }
+  return { nickname: '', description: '', followers: 0 }
 }
 
 /** Locate the monid command. An app started from Finder gets a short PATH, so check the usual
@@ -366,28 +255,20 @@ async function runEndpoint(run, endpoint, query) {
  */
 export async function fetchAccount(account, run) {
   const source = SOURCES[account.platform]
-  const extras = {}
+  if (!source) throw Object.assign(new Error(tr('This platform can\'t be imported through Monid.')), { status: 400 })
+  let profileOutput
   let cost = 0
   if (source.profileFirst) {
     const first = await runEndpoint(run, source.calls.profile, source.query(account.id, 'profile'))
-    extras.profile = first.output
+    profileOutput = first.output
     cost += first.cost
   }
-  const posts = await runEndpoint(run, source.calls.posts, source.query(account.id, 'posts', extras.profile))
+  const posts = await runEndpoint(run, source.calls.posts, source.query(account.id, 'posts', profileOutput))
   cost += posts.cost
   const list = normalizePosts(account.platform, posts.output)
   if (!list.length) throw Object.assign(new Error(tr('No posts found. The account may be private or hasn\'t posted yet.')), { status: 404, cost })
-  if (account.platform === 'X') extras.profile = posts.output?.user
-  for (const kind of ['profile', 'relation']) {
-    if (extras[kind]) continue
-    if (!source.calls[kind]) continue
-    try {
-      const result = await runEndpoint(run, source.calls[kind], source.query(account.id, kind))
-      extras[kind] = result.output
-      cost += result.cost
-    } catch { /* a missing profile doesn't block the posts */ }
-  }
-  return { posts: list, profile: normalizeProfile(account.platform, extras), cost }
+  if (account.platform === 'X') profileOutput = posts.output?.user
+  return { posts: list, profile: normalizeProfile(account.platform, { profile: profileOutput }), cost }
 }
 
 function sniffImage(buffer) {
@@ -437,9 +318,10 @@ export async function saveCovers(posts, platform, state, filesDir, fetchImpl = f
   return saved
 }
 
-/** Write your own account's posts into the content library and analytics. A second import only
- * updates the numbers: no duplicates, and no rewriting text the user has edited. */
-export function importPosts(draft, { account, profile, posts, covers = new Map(), now = new Date().toISOString() }) {
+/** Write an imported account's posts into the content library and analytics. A second import only
+ * updates the numbers: no duplicates, and no rewriting text the user has edited. Metrics are opt-in
+ * because Reddit's Atom feed carries no numbers; the host enables them only for a JSON user import. */
+export function importPosts(draft, { account, profile, posts, covers = new Map(), now = new Date().toISOString(), withMetrics = account.platform !== 'Reddit' }) {
   const { platform } = account
   const nickname = profile.nickname || platform
   let added = 0
@@ -449,16 +331,22 @@ export function importPosts(draft, { account, profile, posts, covers = new Map()
     if (!item) {
       item = {
         id: newId('it'), kind: 'web', title: post.title, body: post.body, tags: [], status: 'published', personaIds: [], drafts: {},
-        createdAt: post.publishedAt, publishedAt: post.publishedAt, scheduledAt: post.publishedAt, platform, url: post.url, source: nickname, media: null, imported: true, externalId,
+        createdAt: post.publishedAt, publishedAt: post.publishedAt, scheduledAt: post.publishedAt, platform, url: post.url, source: nickname,
+        ...(post.author ? { author: post.author } : {}), media: null, imported: true, externalId,
       }
       draft.items.push(item)
       added += 1
     }
+    // A subreddit's posts belong to their authors, so keep that name on the item.
+    if (post.author && item.author !== post.author) item.author = post.author
     if (covers.has(post.id)) item.media = { src: covers.get(post.id) }
-    const numbers = { views: post.views, likes: post.likes, comments: post.comments, shares: post.shares, saves: post.saves }
-    const metric = draft.metrics.find(row => row.externalId === externalId)
-    if (metric) Object.assign(metric, numbers, { fetchedAt: now })
-    else draft.metrics.push({ id: newId('m'), itemId: item.id, platform, date: post.publishedAt, ...numbers, externalId, fetchedAt: now })
+    // Reddit's Atom feed has no public view or like counts, so analytics stay manual or CSV-driven there.
+    if (withMetrics && Number.isFinite(post.likes) && Number.isFinite(post.comments)) {
+      const numbers = { views: post.views, likes: post.likes, comments: post.comments, shares: post.shares, saves: post.saves }
+      const metric = draft.metrics.find(row => row.externalId === externalId)
+      if (metric) Object.assign(metric, numbers, { fetchedAt: now })
+      else draft.metrics.push({ id: newId('m'), itemId: item.id, platform, date: post.publishedAt, ...numbers, externalId, fetchedAt: now })
+    }
   }
   const key = `${platform}:${account.id}`
   const row = draft.accounts.find(entry => entry.externalId === key)
@@ -470,9 +358,9 @@ export function importPosts(draft, { account, profile, posts, covers = new Map()
 
 /** Material for style extraction. The most engaging posts come first, because the model weighs the opening more. */
 export function postsToMaterial(posts) {
-  const score = post => post.likes + post.comments + post.saves + post.shares
+  const score = post => (Number(post.likes) || 0) + (Number(post.comments) || 0) + (Number(post.saves) || 0) + (Number(post.shares) || 0)
   return [...posts]
-    .sort((a, b) => (b.views - a.views) || (score(b) - score(a)))
+    .sort((a, b) => ((Number(b.views) || 0) - (Number(a.views) || 0)) || (score(b) - score(a)))
     .map(post => (post.body && !post.body.startsWith(post.title) ? `${post.title}\n${post.body}` : post.body || post.title))
     .join('\n\n---\n\n')
 }

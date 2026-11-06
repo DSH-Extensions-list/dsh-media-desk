@@ -9,22 +9,22 @@ const SAMPLE_ACCOUNT = 'Sample account'
 const RAW = [
   { k: 'image', img: ['hills', 900, 620], t: 'Why your first AI side project never makes a dollar', b: 'It\'s not the prompts. It\'s not knowing what your first sellable thing should look like. Break that step down in three images.', tags: ['AI', 'Monetization'], a: 'case', p: ['newbie'], st: 'draft', day: 0, src: 'Thought on a walk' },
   { k: 'quote', t: 'Good topics aren\'t dreamed up. They\'re the things you keep complaining about.', b: 'Log a week of complaints. Anything that comes up three times is a topic.', tags: ['Method'], a: 'opinion', p: ['creator'], st: 'idea', day: 0, src: 'Reading notes' },
-  { k: 'video', vid: ['v-aurora', 540, 720], t: 'Agents vs. chatbots, explained in 30 seconds', b: 'One waits for you to ask, the other does the work. Open on a task map that flows like an aurora.', tags: ['AI', 'Explainer'], a: 'explain', p: ['newbie'], st: 'outline', day: -1, sch: [2, 20], pf: 'Douyin', src: 'Vertical script' },
+  { k: 'video', vid: ['v-aurora', 540, 720], t: 'Agents vs. chatbots, explained in 30 seconds', b: 'One waits for you to ask, the other does the work. Open on a task map that flows like an aurora.', tags: ['AI', 'Explainer'], a: 'explain', p: ['newbie'], st: 'outline', day: -1, sch: [2, 20], pf: 'Instagram', src: 'Vertical script' },
   { k: 'web', img: ['topo', 720, 720], t: 'A pricing map for indie developers', b: 'Forty indie pricing pages on one topographic map, so the peaks and valleys jump out.', tags: ['Indie hacking', 'Pricing'], a: 'data', p: ['indie'], st: 'idea', day: -1, url: 'https://example.com/pricing-map', src: 'example.com' },
   { k: 'image', img: ['facade', 720, 940], t: 'Old facades: a design system rewritten by time', b: 'Every window is a patch from whoever came later. A perfect way to talk about tech debt.', tags: ['Design', 'Metaphor'], a: 'analogy', p: ['creator'], st: 'idea', day: -2, src: 'Street photo' },
-  { k: 'note', t: 'A 10-minute checklist before you hit publish', b: 'Does the title have a verb? Are the first three seconds plain English? Is the cover readable on a phone? Does the ending ask for just one thing?', tags: ['Workflow'], a: 'list', p: ['creator'], st: 'ready', day: -2, sch: [1, 9], pf: 'RedNote', src: 'My own checklist' },
-  { k: 'image', img: ['poster-en', 720, 960], t: 'Slow writing: growing one thought into a long-form post', b: 'A week of not chasing trends: 200 words a day, stitched into one piece on day seven.', tags: ['Writing'], a: 'story', p: ['creator'], st: 'published', day: -18, pub: -9, pf: 'WeChat', src: 'Cover experiment' },
+  { k: 'note', t: 'A 10-minute checklist before you hit publish', b: 'Does the title have a verb? Are the first three seconds plain English? Is the cover readable on a phone? Does the ending ask for just one thing?', tags: ['Workflow'], a: 'list', p: ['creator'], st: 'ready', day: -2, sch: [1, 9], pf: 'X', src: 'My own checklist' },
+  { k: 'image', img: ['poster-en', 720, 960], t: 'Slow writing: growing one thought into a long-form post', b: 'A week of not chasing trends: 200 words a day, stitched into one piece on day seven.', tags: ['Writing'], a: 'story', p: ['creator'], st: 'published', day: -18, pub: -9, pf: 'Reddit', src: 'Cover experiment' },
   { k: 'quote', t: 'The best tools end up forgotten.', b: 'A product essay about the things you stop noticing.', tags: ['Product'], a: 'opinion', p: ['indie'], st: 'idea', day: -3, src: 'Quick note' },
-  { k: 'video', vid: ['v-tide', 720, 540], t: 'Tidal working: two hours deep, one hour ashore', b: 'Attention as a tide. Open with five seconds of waves and one question.', tags: ['Productivity'], a: 'analogy', p: ['newbie', 'creator'], st: 'draft', day: -3, sch: [4, 12], pf: 'Bilibili', src: 'Storyboard sketch' },
-  { k: 'image', img: ['ink', 720, 960], t: 'What landscape painting knows about visual hierarchy', b: 'Sharp foreground, misty distance. Chinese ink painters worked out interface hierarchy centuries ago.', tags: ['Design', 'Culture'], a: 'analogy', p: ['creator'], st: 'outline', day: -4, sch: [6, 20], pf: 'WeChat', src: 'Exhibition notes' },
+  { k: 'video', vid: ['v-tide', 720, 540], t: 'Tidal working: two hours deep, one hour ashore', b: 'Attention as a tide. Open with five seconds of waves and one question.', tags: ['Productivity'], a: 'analogy', p: ['newbie', 'creator'], st: 'draft', day: -3, sch: [4, 12], pf: 'X', src: 'Storyboard sketch' },
+  { k: 'image', img: ['ink', 720, 960], t: 'What landscape painting knows about visual hierarchy', b: 'Sharp foreground, misty distance. Chinese ink painters worked out interface hierarchy centuries ago.', tags: ['Design', 'Culture'], a: 'analogy', p: ['creator'], st: 'outline', day: -4, sch: [6, 20], pf: 'Instagram', src: 'Exhibition notes' },
   { k: 'web', img: ['collage', 780, 620], t: 'Ten charts worth a screenshot', b: 'Collect restrained, beautiful charts and break down what each one chose to leave out.', tags: ['Data', 'Design'], a: 'list', p: ['creator'], st: 'idea', day: -4, url: 'https://example.com/charts', src: 'example.com' },
-  { k: 'image', img: ['dunes', 720, 960], t: 'Day 300 of a one-person company: three pivots in the desert', b: 'The revenue curve, the mistakes, and the afternoon I almost quit.', tags: ['Solo business', 'Retrospective'], a: 'story', p: ['indie'], st: 'published', day: -24, pub: -14, pf: 'WeChat', src: 'Retro draft' },
+  { k: 'image', img: ['dunes', 720, 960], t: 'Day 300 of a one-person company: three pivots in the desert', b: 'The revenue curve, the mistakes, and the afternoon I almost quit.', tags: ['Solo business', 'Retrospective'], a: 'story', p: ['indie'], st: 'published', day: -24, pub: -14, pf: 'Reddit', src: 'Retro draft' },
   { k: 'note', t: 'The 5 questions people ask most in the comments', b: '1. Can I do this without a tech background? 2. What does it cost per month? 3. Which model? 4. Is my data safe? 5. How long until I get the hang of it?', tags: ['Audience insight'], a: 'qa', p: ['newbie'], st: 'outline', day: -5, src: 'Comments' },
-  { k: 'image', img: ['riso', 720, 860], t: 'Cover color test: why bold stripes get more clicks', b: 'Three A/B rounds. Stripes won on clicks but didn\'t keep people watching any longer.', tags: ['Covers', 'Experiment'], a: 'data', p: ['creator'], st: 'published', day: -30, pub: -21, pf: 'RedNote', src: 'Test log' },
+  { k: 'image', img: ['riso', 720, 860], t: 'Cover color test: why bold stripes get more clicks', b: 'Three A/B rounds. Stripes won on clicks but didn\'t keep people watching any longer.', tags: ['Covers', 'Experiment'], a: 'data', p: ['creator'], st: 'published', day: -30, pub: -21, pf: 'Instagram', src: 'Test log' },
   { k: 'quote', t: 'You don\'t lack ideas. You lack a place to keep them.', b: 'Could be the opening line for Media Desk itself.', tags: ['Method'], a: 'opinion', p: ['creator'], st: 'idea', day: -6, src: 'Quick note' },
-  { k: 'video', vid: ['v-bus', 720, 480], t: 'The first product I finished on a night bus', b: 'City lights in the background, told in first person. Mood first, go light on the tech.', tags: ['Story', 'Indie hacking'], a: 'story', p: ['indie', 'newbie'], st: 'published', day: -36, pub: -28, pf: 'Douyin', src: 'Vlog' },
+  { k: 'video', vid: ['v-bus', 720, 480], t: 'The first product I finished on a night bus', b: 'City lights in the background, told in first person. Mood first, go light on the tech.', tags: ['Story', 'Indie hacking'], a: 'story', p: ['indie', 'newbie'], st: 'published', day: -36, pub: -28, pf: 'X', src: 'Vlog' },
   { k: 'image', img: ['sea', 900, 600], t: 'The nerve to leave space: three products that got better after cutting half their features', b: 'Deleting is a design decision too. Make the case with real examples.', tags: ['Product', 'Design'], a: 'case', p: ['indie', 'creator'], st: 'idea', day: -7, src: 'Product notes' },
-  { k: 'web', img: ['stairs', 720, 720], t: 'The growth staircase: the real stages from 0 to 10k followers', b: 'Each step needs different work. Don\'t use a 100k playbook to win your first thousand.', tags: ['Growth'], a: 'data', p: ['creator'], st: 'draft', day: -8, sch: [8, 20], pf: 'WeChat', url: 'https://example.com/steps', src: 'example.com' },
+  { k: 'web', img: ['stairs', 720, 720], t: 'The growth staircase: the real stages from 0 to 10k followers', b: 'Each step needs different work. Don\'t use a 100k playbook to win your first thousand.', tags: ['Growth'], a: 'data', p: ['creator'], st: 'draft', day: -8, sch: [8, 20], pf: 'Reddit', url: 'https://example.com/steps', src: 'example.com' },
   { k: 'image', img: ['still', 720, 860], t: 'An orange on the desk: an opening about attention', b: 'Stare at an orange for one minute, then ask the viewer: when did you last focus like that?', tags: ['Openings', 'Productivity'], a: 'story', p: ['newbie'], st: 'idea', day: -9, src: 'Quick idea' },
   { k: 'image', img: ['emboss-en', 760, 760], t: 'The feel of type: why embossed letters make you want to touch the screen', b: 'From letterpress to the comeback of skeuomorphism in interfaces.', tags: ['Design', 'Typography'], a: 'explain', p: ['creator'], st: 'idea', day: -10, src: 'Type specimen' },
   { k: 'video', vid: ['v-ink', 600, 600], t: 'Eight seconds of ink: a transition library', b: 'Ink spreading in water works as a chapter transition. Package it as a set.', tags: ['Footage', 'Editing'], a: 'list', p: ['creator'], st: 'idea', day: -11, src: 'Stock clips' },
@@ -59,10 +59,9 @@ const SKILLS = [
 ]
 
 const ACCOUNTS = [
-  ['WeChat', SAMPLE_ACCOUNT, 12840],
-  ['RedNote', SAMPLE_ACCOUNT, 8620],
-  ['Douyin', SAMPLE_ACCOUNT, 21300],
-  ['Bilibili', SAMPLE_ACCOUNT, 5470],
+  ['Instagram', SAMPLE_ACCOUNT, 12840],
+  ['X', SAMPLE_ACCOUNT, 8620],
+  ['Reddit', SAMPLE_ACCOUNT, 21300],
 ]
 
 function shift(base, days, hour = 10, minute = 0) {
@@ -127,7 +126,7 @@ export function buildSeed(now) {
       const views = Math.round(peak * Math.exp(-d * 0.55) * (0.9 + ((d * 37) % 20) / 100))
       metrics.push({
         id: `seed_m_${item.id}_${d}`, itemId: item.id, platform: item.platform, date: date.toISOString(), views,
-        likes: Math.round(views * 0.046), comments: Math.round(views * 0.009), shares: Math.round(views * 0.012), saves: Math.round(views * (item.platform === 'RedNote' ? 0.05 : 0.018)), sample: true,
+        likes: Math.round(views * 0.046), comments: Math.round(views * 0.009), shares: Math.round(views * 0.012), saves: Math.round(views * 0.018), sample: true,
       })
     }
   }

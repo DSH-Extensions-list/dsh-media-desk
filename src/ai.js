@@ -1,7 +1,7 @@
 // Model calls and prompts. Uses the DeepSeek Harness default model, so there is
 // no separate key to configure. When the model is unavailable we degrade
 // explicitly: the engine field tells the UI where this result came from.
-import { STATUS_LABEL, statusLabel } from './ops.js'
+import { PLATFORMS, STATUS_LABEL, statusLabel } from './ops.js'
 import { activeStyle, styleToVoice } from './style.js'
 import { tr } from './i18n.js'
 
@@ -101,7 +101,7 @@ const OP_DOC = `Available ops (each one is an object; op is required, the rest i
 - add_skill {name, rule, source, status: proposed|active, confidence} / update_skill {id,...} / delete_skill {id}
 - set_style {id}: switch the writing style. Pick the id from styles; null means no specific style.
 - add_metric {itemId?, platform, date, views, likes, comments, shares, saves}
-platform must be one of: WeChat, RedNote, Douyin, Bilibili, WeChat Channels, TikTok, Instagram, YouTube, X.`
+platform must be one of: ${PLATFORMS.join(', ')}.`
 
 const REVISE_DOC = () => `
 ${ENGLISH_ONLY}
@@ -120,7 +120,7 @@ function productionBrief(production) {
   }
 }
 
-export function chatPrompts(state, message, { focusId, history = [], now = new Date() }) {
+export function chatPrompts(state, message, { focusId, history = [], now = new Date() } = {}) {
   const focused = focusId ? state.items.find(row => row.id === focusId) : null
   const production = focused?.production?.status === 'done' ? focused.production : null
   const system = `You are the assistant inside the "Media Desk" plugin for DeepSeek Harness. The user manages topics, ideas, content, scheduling, analytics, styles and writing rules with one sentence. Work out what they want, then turn it into structured operations.

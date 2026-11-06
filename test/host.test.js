@@ -63,10 +63,10 @@ test('localIntent saves a note', () => {
 
 test('localIntent finds a quoted title and schedules it', () => {
   const state = seed()
-  const plan = localIntent(state, 'schedule "Slow writing" for tomorrow 8pm on xiaohongshu', { now: NOW })
+  const plan = localIntent(state, 'schedule "Slow writing" for tomorrow 8pm on reddit', { now: NOW })
   const op = plan.ops[0]
   assert.equal(op.op, 'schedule_item')
-  assert.equal(op.platform, 'RedNote')
+  assert.equal(op.platform, 'Reddit')
   assert.equal(state.items.find(i => i.id === op.id).title.startsWith('Slow writing'), true)
   const when = new Date(op.scheduledAt)
   assert.deepEqual([when.getMonth() + 1, when.getDate(), when.getHours(), when.getMinutes()], [11, 1, 20, 0])
@@ -90,8 +90,8 @@ test('localIntent answers the schedule question in English', () => {
   const state = seed()
   const reply = localIntent(state, 'what\'s on my schedule', { now: NOW }).reply
   assert.match(reply, /^Coming up:/)
-  const [receipt] = applyOps(state, [{ op: 'schedule_item', id: 'seed_2', scheduledAt: '2026-11-03T12:00:00Z', platform: 'RedNote' }]).receipts
-  assert.match(receipt.text, /^Scheduled ".+" for Nov 3 \d\d:\d\d · RedNote$/)
+  const [receipt] = applyOps(state, [{ op: 'schedule_item', id: 'seed_2', scheduledAt: '2026-11-03T12:00:00Z', platform: 'Reddit' }]).receipts
+  assert.match(receipt.text, /^Scheduled ".+" for Nov 3 \d\d:\d\d · Reddit$/)
   const [moved] = applyOps(state, [{ op: 'set_status', id: 'seed_2', status: 'ready' }]).receipts
   assert.match(moved.text, /^Moved ".+" to Ready$/)
 })
@@ -727,15 +727,16 @@ test('When learning a style, the name the user typed wins over the model name', 
   assert.equal(normalizeStyle({}, '').name, 'Untitled style')
 })
 
-test('Monid: profile links accept the domestic platform URL formats and reject lookalike hosts', async () => {
+test('Monid: profile links accept the supported platform URL formats and reject lookalike hosts', async () => {
   const { findUrl, parseAccountUrl } = await import('../src/monid.js')
-  assert.equal(parseAccountUrl('https://www.xiaohongshu.com/user/profile/aaaabbbbccccdddd00001111?xsec=1').platform, 'RedNote')
-  assert.equal(parseAccountUrl('https://www.douyin.com/user/MS4wLjABAAAAabcdefghijklmnopqrstuvwxyz?from=1').id, 'MS4wLjABAAAAabcdefghijklmnopqrstuvwxyz')
-  assert.equal(parseAccountUrl('https://space.bilibili.com/12345678/video').id, '12345678')
-  for (const bad of ['https://evil.example/user/profile/aaaabbbbccccdddd00001111', 'https://xiaohongshu.com.evil.example/user/profile/aaaabbbbccccdddd00001111', 'https://www.xiaohongshu.com/user/profile/--query', 'https://www.douyin.com/user/self', 'javascript:alert(1)']) {
+  assert.equal(parseAccountUrl('https://www.instagram.com/someone/?hl=en').platform, 'Instagram')
+  assert.equal(parseAccountUrl('https://www.instagram.com/someone/?hl=en').id, 'someone')
+  assert.equal(parseAccountUrl('https://x.com/someone').id, 'someone')
+  assert.equal(parseAccountUrl('https://twitter.com/someone').platform, 'X')
+  for (const bad of ['https://evil.example/someone', 'https://instagram.com.evil.example/someone', 'https://www.instagram.com/p/DfQCqMnhpsG/', 'https://x.com/home', 'javascript:alert(1)']) {
     assert.equal(parseAccountUrl(bad), null, bad)
   }
-  assert.equal(findUrl('Copy this link https://v.douyin.com/abc/ and open Douyin'), 'https://v.douyin.com/abc/')
+  assert.equal(findUrl('Copy this link https://x.com/someone and open X'), 'https://x.com/someone')
 })
 
 test('Monid: short links only follow the platform\'s own domains, and a non-profile result is an error', async () => {
@@ -743,50 +744,49 @@ test('Monid: short links only follow the platform\'s own domains, and a non-prof
   await assert.rejects(resolveAccount('https://evil.example/x', async () => assert.fail('should not fetch')), /isn't recognized/)
   await assert.rejects(resolveAccount('no link here'), /No link found/)
   const hops = []
-  const fake = async (url) => { hops.push(url); return { headers: new Headers({ location: 'https://space.bilibili.com/42' }) } }
-  const account = await resolveAccount('Look at this https://b23.tv/abc', fake)
-  assert.equal(account.id, '42')
-  assert.equal(hops.length, 1)
+  const fake = async (url) => { hops.push(url); return { headers: new Headers({ location: 'https://www.instagram.com/someone/' }) } }
+  await assert.rejects(resolveAccount('Look at this https://evil.example/abc', fake), /isn't recognized/)
+  await assert.rejects(resolveAccount('https://www.instagram.com/p/DfQCqMnhpsG/', fake), /isn't recognized/)
+  assert.equal(hops.length, 0)
 })
 
-const xhsOutput = { code: 0, success: true, data: { notes: [
-  { id: 'a'.repeat(24), title: 'First post', desc: 'Body text', create_time: 1790000000, likes: 10, comments_count: 2, collected_count: 3, share_count: 1, view_count: 0, images_list: [{ url: 'http://ci.example/1.jpg' }] },
-  { id: 'not-valid', title: 'Bad data' },
-] } }
+const igOutput = { items: [
+  { code: 'DfQCqMnhpsG', taken_at: 1790000000, like_count: 10, comment_count: 6, caption: { text: 'First post\nBody text' }, image_versions2: { candidates: [{ url: 'https://ci.example/1.jpg' }] } },
+  { code: 'bad!', caption: { text: 'Bad data' } },
+] }
 
 test('Monid: only the usable fields come through, and bad rows and platform errors do not', async () => {
   const { normalizePosts, normalizeProfile } = await import('../src/monid.js')
-  const [note, ...rest] = normalizePosts('RedNote', xhsOutput)
+  const [post, ...rest] = normalizePosts('Instagram', igOutput)
   assert.equal(rest.length, 0)
-  assert.deepEqual([note.title, note.likes, note.views, note.cover], ['First post', 10, 0, 'https://ci.example/1.jpg'])
-  assert.equal(note.url, `https://www.xiaohongshu.com/explore/${'a'.repeat(24)}`)
-  const [video] = normalizePosts('Douyin', { status_code: 0, aweme_list: [{ aweme_id: '123', desc: 'First line\nSecond line', create_time: 1790000000, statistics: { digg_count: 5, play_count: 0 }, video: { cover: { url_list: ['https://p.example/c.jpg'] } } }] })
-  assert.deepEqual([video.title, video.likes, video.url], ['First line', 5, 'https://www.douyin.com/video/123'])
-  const [bili] = normalizePosts('Bilibili', { code: 0, data: { list: { vlist: [{ bvid: 'BV1xx', title: 'Video', created: 1790000000, play: 99, comment: 1, pic: '//i0.example/a.jpg' }] } } })
-  assert.deepEqual([bili.views, bili.cover], [99, 'https://i0.example/a.jpg'])
-  assert.throws(() => normalizePosts('Douyin', { status_code: 8, status_msg: 'Account not found' }), /Account not found/)
-  assert.throws(() => normalizePosts('Bilibili', { code: -404, message: 'Nothing here' }), /Nothing here/)
-  assert.equal(normalizeProfile('Bilibili', { profile: { data: { name: 'Someone' } }, relation: { follower: 7 } }).followers, 7)
-  assert.equal(normalizeProfile('RedNote', { profile: { data: { nickname: 'Someone', interactions: [{ type: 'fans', count: 8 }] } } }).followers, 8)
+  assert.deepEqual([post.title, post.likes, post.views, post.cover], ['First post', 10, 0, 'https://ci.example/1.jpg'])
+  assert.equal(post.url, 'https://www.instagram.com/p/DfQCqMnhpsG/')
+  const [tweet] = normalizePosts('X', { status: 'ok', timeline: [{ tweet_id: '123', text: 'First line\nSecond line', created_at: 'Mon Nov 02 21:57:53 +0000 2026', views: '5', favorites: 5, replies: 0, retweets: 0, quotes: 0, bookmarks: 0, media: [] }], user: { profile: 'someone' } })
+  assert.deepEqual([tweet.title, tweet.likes, tweet.url], ['First line', 5, 'https://x.com/someone/status/123'])
+  assert.throws(() => normalizePosts('Instagram', { message: 'Nothing here' }), /Nothing here/)
+  assert.throws(() => normalizePosts('X', { message: 'Rate limited' }), /Rate limited/)
+  assert.equal(normalizeProfile('Instagram', { profile: { data: { user: { full_name: 'Someone', edge_followed_by: { count: 8 } } } } }).followers, 8)
+  assert.equal(normalizeProfile('X', { profile: { name: 'Someone', sub_count: 7 } }).followers, 7)
 })
 
-test('Monid: cost adds up, a failed profile does not block the content, and the budget limit and missing install are explained', async () => {
+test('Monid: cost adds up, and the budget limit, missing install and empty account are explained', async () => {
   const { fetchAccount, monidStatus } = await import('../src/monid.js')
-  const account = { platform: 'RedNote', id: 'a'.repeat(24), url: 'u' }
+  const account = { platform: 'Instagram', id: 'someone', url: 'u' }
   const calls = []
   const run = async (args) => {
     calls.push(args)
-    if (args.includes('/api/v1/xiaohongshu/app_v2/get_user_info')) throw new Error('timed out')
-    return { status: 'COMPLETED', cost: { value: 0.01 }, output: xhsOutput }
+    if (args.includes('/api/v1/instagram/v1/fetch_user_info_by_username')) return { status: 'COMPLETED', cost: { value: 0.01 }, output: { data: { user: { id: '25025320', full_name: 'Someone' } } } }
+    return { status: 'COMPLETED', cost: { value: 0.01 }, output: igOutput }
   }
   const result = await fetchAccount(account, run)
   assert.equal(result.posts.length, 1)
-  assert.equal(result.cost, 0.01)
+  assert.equal(result.cost, 0.02)
   assert.equal(calls.length, 2)
-  assert.deepEqual(JSON.parse(calls[0][calls[0].indexOf('--query') + 1]), { user_id: 'a'.repeat(24) })
+  assert.deepEqual(JSON.parse(calls[0][calls[0].indexOf('--query') + 1]), { username: 'someone' })
+  assert.deepEqual(JSON.parse(calls[1][calls[1].indexOf('--query') + 1]), { user_id: '25025320', count: 20 })
   await assert.rejects(fetchAccount(account, async () => ({ status: 'BLOCKED' })), /budget limit/)
   await assert.rejects(fetchAccount(account, async () => null), /isn't installed/)
-  await assert.rejects(fetchAccount(account, async () => ({ status: 'COMPLETED', output: { code: 0, data: { notes: [] } } })), /No posts found/)
+  await assert.rejects(fetchAccount(account, async () => ({ status: 'COMPLETED', output: { items: [] } })), /No posts found/)
   assert.deepEqual(await monidStatus(async () => null), { state: 'missing' })
   assert.deepEqual(await monidStatus(async () => ({ error: { code: 'AUTH_FAILED' } })), { state: 'nokey' })
   assert.deepEqual(await monidStatus(async () => ({ balance: { value: 1.5, currency: 'USD' } })), { state: 'ready', balance: { value: 1.5, currency: 'USD' } })
@@ -795,9 +795,9 @@ test('Monid: cost adds up, a failed profile does not block the content, and the 
 test('Monid: a second import only updates the numbers, sample data drops out of insights, and engagement ranks when there are no views', async () => {
   const { importPosts, normalizePosts, postsToMaterial } = await import('../src/monid.js')
   const { computeInsights } = await import('../src/learn.js')
-  const posts = normalizePosts('RedNote', xhsOutput)
-  const draft = { items: [{ id: 's', title: 'Sample', status: 'published', sample: true }], metrics: [{ id: 'sm', itemId: 's', platform: 'Douyin', date: '2026-01-01T00:00:00Z', views: 9999, likes: 1, sample: true }], accounts: [{ id: 'sa', followers: 500, sample: true }] }
-  const account = { platform: 'RedNote', id: 'x', url: 'https://www.xiaohongshu.com/user/profile/x' }
+  const posts = normalizePosts('Instagram', igOutput)
+  const draft = { items: [{ id: 's', title: 'Sample', status: 'published', sample: true }], metrics: [{ id: 'sm', itemId: 's', platform: 'Reddit', date: '2026-01-01T00:00:00Z', views: 9999, likes: 1, sample: true }], accounts: [{ id: 'sa', followers: 500, sample: true }] }
+  const account = { platform: 'Instagram', id: 'x', url: 'https://www.instagram.com/x/' }
   const first = importPosts(draft, { account, profile: { nickname: 'Me', followers: 100 }, posts })
   assert.deepEqual(first, { added: 1, updated: 0 })
   const item = draft.items.find(row => row.imported)
@@ -859,8 +859,8 @@ test('Monid: covers are saved locally, and private addresses, non-images and exi
     { id: 'none', cover: null },
     { id: 'known', cover: 'https://93.184.216.34/known.png' },
   ]
-  const state = { items: [{ externalId: 'Douyin:known', media: { src: 'media-desk/files/x.png' } }] }
-  const saved = await saveCovers(posts, 'Douyin', state, dir, fake)
+  const state = { items: [{ externalId: 'Instagram:known', media: { src: 'media-desk/files/x.png' } }] }
+  const saved = await saveCovers(posts, 'Instagram', state, dir, fake)
   assert.deepEqual([...saved.keys()], ['ok'])
   assert.match(saved.get('ok'), /^media-desk\/files\/c_[\w]+\.png$/)
   assert.equal(requested.some(url => url.includes('127.0.0.1') || url.includes('known')), false)
@@ -970,7 +970,7 @@ test('Status rules: publish time, schedule and unschedule, and clearing samples 
   applyOps(state, [{ op: 'set_status', id: item.id, status: 'draft' }])
   assert.equal(item.publishedAt, undefined, 'leaving published clears the publish time')
   const sample = state.items.find(row => row.sample)
-  const [child] = applyOps(state, [{ op: 'add_item', title: 'Hangs under the sample', parentId: sample.id }, { op: 'add_metric', itemId: sample.id, platform: 'Douyin', date: '2026-11-01T12:00:00Z', views: 10 }]).receipts
+  const [child] = applyOps(state, [{ op: 'add_item', title: 'Hangs under the sample', parentId: sample.id }, { op: 'add_metric', itemId: sample.id, platform: 'Instagram', date: '2026-11-01T12:00:00Z', views: 10 }]).receipts
   applyOps(state, [{ op: 'clear_samples' }])
   assert.equal(state.items.find(row => row.id === child.target).parentId, null)
   assert.equal(state.metrics.length, 0)

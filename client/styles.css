@@ -15,8 +15,8 @@
   --card: var(--dsw-alias-bg-layer-2);
   --accent: var(--dsw-alias-link);
   --glass: color-mix(in srgb, var(--dsw-alias-bg-layer-2) 72%, transparent);
-  --serif: "Songti SC", "STSong", "Noto Serif SC", "Source Han Serif SC", Georgia, serif;
-  --latin-serif: "Iowan Old Style", "Palatino", Georgia, "Songti SC", serif;
+  --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, "Liberation Serif", "DejaVu Serif", serif;
+  --latin-serif: "Palatino Linotype", "Iowan Old Style", Palatino, "Book Antiqua", Georgia, "Liberation Serif", "DejaVu Serif", serif;
   --ease: cubic-bezier(.2, .8, .2, 1);
   --r-xs: var(--dsw-radius-xs, 4px);
   --r-sm: var(--dsw-radius-sm, 8px);

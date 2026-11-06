@@ -6,7 +6,7 @@ import { tr } from './i18n.js'
 export const STATUSES = ['idea', 'outline', 'draft', 'ready', 'published']
 export const STATUS_LABEL = { idea: 'Idea', outline: 'Outline', draft: 'Draft', ready: 'Ready', published: 'Published' }
 export const KINDS = ['image', 'video', 'web', 'quote', 'note']
-export const PLATFORMS = ['WeChat', 'RedNote', 'Douyin', 'Bilibili', 'WeChat Channels', 'TikTok', 'Instagram', 'YouTube', 'X']
+export const PLATFORMS = ['Instagram', 'X', 'Reddit']
 
 /** The display name of a status. */
 export function statusLabel(status) {

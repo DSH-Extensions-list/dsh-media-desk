@@ -4,11 +4,10 @@ import { t } from './i18n.js'
 export const STATUSES = ['idea', 'outline', 'draft', 'ready', 'published']
 export const STATUS_LABEL = { idea: 'Idea', outline: 'Outline', draft: 'Draft', ready: 'Ready', published: 'Published' }
 export const KIND_LABEL = { image: 'Image', video: 'Video', web: 'Web', quote: 'Quote', note: 'Note' }
-export const PLATFORMS = ['WeChat', 'RedNote', 'Douyin', 'Bilibili', 'WeChat Channels', 'TikTok', 'Instagram', 'YouTube', 'X']
-const OVERSEAS = new Set(['TikTok', 'Instagram', 'YouTube', 'X'])
-/** Platform dropdown order: overseas platforms first. */
+export const PLATFORMS = ['Instagram', 'X', 'Reddit']
+/** Platform dropdown order: the three supported platforms, in a fixed order. */
 export function platformChoices() {
-  return [...PLATFORMS.filter(p => OVERSEAS.has(p)), ...PLATFORMS.filter(p => !OVERSEAS.has(p))]
+  return [...PLATFORMS]
 }
 export const STYLE_CATEGORIES = ['Tech', 'Travel & food', 'Lifestyle', 'Opinion', 'Tutorials', 'Reviews', 'Stories', 'News']
 
@@ -16,8 +15,7 @@ export function styleIcon(style) {
   return style?.icon || '✍️'
 }
 export const PLATFORM_URL = {
-  WeChat: 'https://mp.weixin.qq.com/', RedNote: 'https://creator.xiaohongshu.com/publish/publish', Douyin: 'https://creator.douyin.com/creator-micro/content/upload',
-  Bilibili: 'https://member.bilibili.com/platform/upload/video/frame', 'WeChat Channels': 'https://channels.weixin.qq.com/platform/post/create', TikTok: 'https://www.tiktok.com/tiktokstudio/upload', Instagram: 'https://www.instagram.com/', YouTube: 'https://studio.youtube.com/', X: 'https://x.com/compose/post',
+  Instagram: 'https://www.instagram.com/', X: 'https://x.com/compose/post', Reddit: 'https://www.reddit.com/submit',
 }
 
 export function hash(text) {
