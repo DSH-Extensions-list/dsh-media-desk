@@ -56,9 +56,13 @@ function meta(html, names) {
 }
 
 function followerHint(text) {
-  const m = /([\d.,]+)\s*(k|K|m|M)?\s*followers/i.exec(text) ?? /followers[^\d]{0,6}([\d.,]+)\s*(k|K|m|M)?/i.exec(text)
+  // Profile pages are read in whatever language the platform serves, so the
+  // Chinese forms for followers and large counts stay parseable. They are
+  // written as escapes so this file itself carries no literal CJK.
+  const m = /([\d.,]+)\s*([\u4e07\u5343kKmM])?\s*(?:[\u7c89\u4e1d]|[\u5173\u6ce8\u8005]|followers)/i.exec(text)
+    ?? /(?:[\u7c89\u4e1d]|[\u5173\u6ce8\u8005]|followers)[^\d]{0,6}([\d.,]+)\s*([\u4e07\u5343kKmM])?/i.exec(text)
   if (!m) return null
-  const unit = { k: 1e3, m: 1e6 }[String(m[2] ?? '').toLowerCase()] ?? 1
+  const unit = { '\u4e07': 1e4, '\u5343': 1e3, k: 1e3, m: 1e6 }[String(m[2] ?? '').toLowerCase()] ?? 1
   const value = Number(m[1].replace(/,/g, '')) * unit
   return Number.isFinite(value) ? Math.round(value) : null
 }
@@ -69,7 +73,7 @@ async function fetchPublic(raw, fetchImpl) {
     const url = await assertPublicUrl(current)
     const res = await fetchImpl(url, {
       redirect: 'manual', signal: AbortSignal.timeout(TIMEOUT_MS),
-      headers: { 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36', accept: 'text/html,application/xhtml+xml', 'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8' },
+      headers: { 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36', accept: 'text/html,application/xhtml+xml', 'accept-language': 'en-US,en;q=0.9' },
     })
     if (res.status >= 300 && res.status < 400 && res.headers.get('location')) {
       current = new URL(res.headers.get('location'), url).toString()

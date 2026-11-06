@@ -28,6 +28,9 @@ export class Settings {
     try {
       const saved = JSON.parse(await readFile(this.file, 'utf8'))
       this.value = { ...DEFAULTS, ...saved, image: { ...DEFAULTS.image, ...saved.image } }
+      // Older builds stored a language preference. It selects nothing now, so
+      // drop it rather than serving a dead field back to the browser.
+      delete this.value.language
     } catch (err) {
       if (err.code !== 'ENOENT') throw err
       this.value = structuredClone(DEFAULTS)

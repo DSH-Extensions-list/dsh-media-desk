@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""生成示例卡片用的程序化配图与循环视频，输出到 assets/。不依赖任何外部素材。"""
+"""Procedural artwork and looping video for the sample cards, written to assets/. Uses no external material."""
 import os
 import subprocess
 import tempfile
@@ -9,7 +9,6 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'assets')
 os.makedirs(OUT, exist_ok=True)
-SONGTI = '/System/Library/Fonts/Supplemental/Songti.ttc'
 
 
 def rng(seed):
@@ -177,22 +176,17 @@ def bokeh_frame(w, h, t=0.0, seed=81):
     return np.clip(np.asarray(img, np.float32) + np.asarray(over, np.float32), 0, 255)
 
 
-def emboss(w=760, h=760, en=False):
+def emboss(w=760, h=760):
     n = fbm(w, h, 91, octaves=2, base=2)
     img = Image.new('L', (w, h), 0)
     d = ImageDraw.Draw(img)
-    if en:
-        font = ImageFont.truetype('/System/Library/Fonts/Supplemental/Didot.ttc', 280, index=0)
-        d.text((w / 2, h / 2), 'Idea', fill=255, font=font, anchor='mm')
-    else:
-        font = ImageFont.truetype(SONGTI, 240, index=0)
-        for i, ch in enumerate('灵感'):
-            d.text((90 + i * 290, 240 + i * 60), ch, fill=255, font=font)
+    font = ImageFont.truetype('/System/Library/Fonts/Supplemental/Didot.ttc', 280, index=0)
+    d.text((w / 2, h / 2), 'Idea', fill=255, font=font, anchor='mm')
     mask = np.asarray(img.filter(ImageFilter.GaussianBlur(5)), np.float32) / 255
     gy, gx = np.gradient(mask + n * 0.6)
     light = gx * -4.5 + gy * -4.5
     a = (178 + light[..., None] * 340 + fbm(w, h, 92, octaves=7, base=30)[..., None] * 36) * np.array([0.98, 0.98, 1.0])
-    save(grain(a, 93, 5), 'emboss-en' if en else 'emboss')
+    save(grain(a, 93, 5), 'emboss-en')
 
 
 def ink(w=720, h=960):
@@ -255,18 +249,6 @@ def stairs(w=720, h=720):
     side = x > w * (0.25 + 0.5 * (y / h))
     a = np.where(side[..., None], a * 0.28 + 6, a)
     save(grain(np.repeat(a, 3, axis=2), 131, 9), 'stairs')
-
-
-def poster(w=720, h=960):
-    img = Image.new('RGB', (w, h), '#101114')
-    d = ImageDraw.Draw(img)
-    big = ImageFont.truetype(SONGTI, 300, index=0)
-    small = ImageFont.truetype(SONGTI, 34, index=0)
-    d.text((48, 40), '慢', fill='#f1ece1', font=big)
-    d.text((340, 340), '写', fill='#e7502d', font=big)
-    d.line([48, 760, 672, 760], fill='#f1ece1', width=1)
-    d.text((48, 790), '把一个念头养成一篇长文', fill='#f1ece1', font=small)
-    save(grain(np.asarray(img, np.float32), 141, 6), 'poster', quality=90)
 
 
 def poster_en(w=720, h=960):
@@ -349,5 +331,5 @@ if __name__ == '__main__':
     aurora(seed=35, stops=('#fbe3d6', '#f6c8cf', '#e4c6ef', '#c9d9f7', '#f8ead0'), name='blush')
     riso(); topo(); facade(); sea()
     save(grain(bokeh_frame(720, 900), 82, 5), 'night')
-    emboss(); ink(); collage(); still(); stairs(); poster(); poster_en(); emboss(en=True)
+    emboss(); ink(); collage(); still(); stairs(); poster_en()
     video_aurora(); video_tide(); video_bus(); video_ink()

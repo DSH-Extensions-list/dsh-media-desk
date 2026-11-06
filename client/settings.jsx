@@ -1,4 +1,4 @@
-// Settings: the open image model and where drafts are saved.
+// Settings: the configured image model and where drafts are saved.
 import React from 'react'
 import { saveSettings, setDesk, testImage, useDesk } from './desk.js'
 import { t } from './i18n.js'

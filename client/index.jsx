@@ -110,7 +110,6 @@ function SampleBadge() {
 }
 
 function Desk() {
-  // Keeps the tree subscribed to the interface language
   const ready = useDesk(s => Boolean(s.state))
   const error = useDesk(s => s.error)
   const view = useDesk(s => s.view)
@@ -189,7 +188,7 @@ export const inject = ['slots']
 
 export function apply(ctx) {
   ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key: PANEL_ID }, Desk))
-  // The sidebar label is read once at registration, so re-register on a language change
+  // Register the sidebar entry once and release it when the panel unmounts.
   ctx.effect(() => {
     let release = null
     const mount = () => {

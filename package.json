@@ -1,7 +1,7 @@
 {
   "name": "dsh-media-desk",
   "version": "2.6.1",
-  "description": "DeepSeek Harness 插件。一句话记灵感，一键成稿：口播脚本、标题、视频封面、配图和黑白线稿分镜。",
+  "description": "A DeepSeek Harness plugin. Capture an idea in one line, then draft the spoken script, title, video cover, images and storyboard in one click.",
   "type": "module",
   "main": "src/host.js",
   "exports": {
@@ -33,10 +33,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/woniuniuniu/dsh-media-desk.git"
+    "url": "git+https://github.com/arzvaak/dsh-media-desk.git"
   },
-  "homepage": "https://github.com/woniuniuniu/dsh-media-desk#readme",
-  "bugs": "https://github.com/woniuniuniu/dsh-media-desk/issues",
+  "homepage": "https://github.com/arzvaak/dsh-media-desk#readme",
+  "bugs": "https://github.com/arzvaak/dsh-media-desk/issues",
   "scripts": {
     "build": "node scripts/build.mjs",
     "watch": "node scripts/build.mjs --watch",

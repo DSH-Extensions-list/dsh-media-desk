@@ -1,5 +1,5 @@
 #!/bin/sh
-# 在隔离的 DSH_HOME 里重新安装插件并启动 Web 版，不碰 ~/.dsh。用法：scripts/dev-sandbox.sh [端口]
+# Reinstall the plugin in an isolated DSH_HOME and start the web version, leaving ~/.dsh alone. Usage: scripts/dev-sandbox.sh [port]
 set -e
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SANDBOX="${DSH_SANDBOX:-$ROOT/../.dsh-sandbox}"

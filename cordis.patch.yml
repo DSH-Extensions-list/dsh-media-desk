@@ -1,4 +1,4 @@
-# dsh-media-desk bundle patch：同一个包提供 host 半片与浏览器半片
+# dsh-media-desk bundle patch: one package provides both the host half and the browser half
 - insert:
     - id: media-desk
       name: 'dsh-media-desk'

@@ -171,11 +171,17 @@ function normalizePresets(styles) {
     if (!row) continue
     row.category = mapCategory(row.category)
     if (!row.preset) continue
-    if (!TEXT_FIELDS.some(field => hasCjk(row[field]))) continue
     const preset = STYLE_PRESETS.find(entry => entry.id === String(row.id).replace(/^preset_/, ''))
     if (!preset) continue
-    for (const field of TEXT_FIELDS) row[field] = structuredClone(preset[field])
-    row.source = 'Preset'
+    // Field by field, so a preset the user edited in English keeps that edit
+    // while the fields still in Chinese are translated.
+    let translated = false
+    for (const field of TEXT_FIELDS) {
+      if (!hasCjk(row[field])) continue
+      row[field] = structuredClone(preset[field])
+      translated = true
+    }
+    if (translated) row.source = 'Preset'
   }
 }
 

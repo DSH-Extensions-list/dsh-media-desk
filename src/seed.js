@@ -95,6 +95,23 @@ const ACCOUNTS = [
   ['Bilibili', SAMPLE_ACCOUNT, 5470],
 ]
 
+// Built-in text by row id, for upgrading rows that are still Chinese. Same
+// values buildSeed writes, so a migrated row matches a fresh install.
+const PEOPLE_TEXT = Object.fromEntries(PEOPLE.map(([id, name, role, note, traits]) => [id, { name, role, note, traits }]))
+const ANGLE_TEXT = Object.fromEntries(ANGLES.map(([id, name, hook, prompt]) => [id, { name, hook, prompt }]))
+const SKILL_TEXT = Object.fromEntries(SKILLS.map(([name, rule, evidence], index) => [`seed_s_${index + 1}`, { name, rule, evidence }]))
+
+// Items, metrics and accounts store the platform as part of a compound key
+// ("RedNote:abc123"). Translating the platform field alone would leave the key
+// pointing at the old name, so re-imports would no longer match existing rows.
+function migrateKey(key) {
+  if (typeof key !== 'string') return key
+  const at = key.indexOf(':')
+  if (at < 0) return key
+  const mapped = PLATFORM_ALIASES[key.slice(0, at)]
+  return mapped ? `${mapped}${key.slice(at)}` : key
+}
+
 function shift(base, days, hour = 10, minute = 0) {
   const d = new Date(base)
   d.setDate(d.getDate() + days)
@@ -201,29 +218,62 @@ function upgradeLegacySamples(state) {
   for (const row of state.items ?? []) {
     if (!row) continue
     if (row.platform) row.platform = PLATFORM_ALIASES[row.platform] ?? row.platform
+    row.externalId = migrateKey(row.externalId)
     if (row.source === LEGACY_PRESET_SOURCE) row.source = 'Preset'
     else if (row.source === LEGACY_SAMPLE_SOURCE) row.source = 'Sample'
-    // A sample card the user rewrote in English has no CJK left, so it is left alone.
     const seed = row.sample === true ? SEED_TEXT[row.id] : null
-    if (seed && ['title', 'body', 'tags', 'source'].some(field => hasCjk(row[field]))) {
-      for (const field of ['title', 'body', 'tags', 'source']) row[field] = structuredClone(seed[field])
+    if (seed) {
+      // Field by field, so an English edit to one field survives the translation
+      // of the others. A sample card the user rewrote entirely is left alone.
+      for (const field of ['title', 'body', 'tags', 'source']) {
+        if (hasCjk(row[field])) row[field] = structuredClone(seed[field])
+      }
       const legacyImage = row.media?.src?.split('/').pop()
       if (legacyImage && MEDIA_UPGRADES[legacyImage]) row.media = { ...row.media, src: A(MEDIA_UPGRADES[legacyImage]) }
+      // Model output on a sample card can't be translated field by field, and it
+      // is placeholder work, so drop it rather than leave Chinese in the UI.
+      if (hasCjk(row.production)) delete row.production
+      if (hasCjk(row.drafts)) row.drafts = {}
     }
     delete row.otherLang
+  }
+  for (const row of state.people ?? []) {
+    const text = row?.sample === true ? PEOPLE_TEXT[row.id] : null
+    if (!text) continue
+    for (const field of ['name', 'role', 'note', 'traits']) {
+      if (hasCjk(row[field])) row[field] = structuredClone(text[field])
+    }
+  }
+  for (const row of state.angles ?? []) {
+    const text = row?.sample === true ? ANGLE_TEXT[row.id] : null
+    if (!text) continue
+    for (const field of ['name', 'hook', 'prompt']) {
+      if (hasCjk(row[field])) row[field] = structuredClone(text[field])
+    }
   }
   for (const row of state.accounts ?? []) {
     if (!row) continue
     if (row.platform) row.platform = PLATFORM_ALIASES[row.platform] ?? row.platform
+    row.externalId = migrateKey(row.externalId)
     if (row.sample === true && row.handle === LEGACY_SAMPLE_ACCOUNT) row.handle = SAMPLE_ACCOUNT
   }
   for (const row of state.metrics ?? []) {
     if (row?.platform) row.platform = PLATFORM_ALIASES[row.platform] ?? row.platform
+    if (row) row.externalId = migrateKey(row.externalId)
   }
   for (const row of state.skills ?? []) {
     if (!row) continue
     if (row.source === LEGACY_PRESET_SOURCE) row.source = 'Preset'
     else if (row.source === LEGACY_SAMPLE_SOURCE) row.source = 'Sample'
+    const text = row.sample === true ? SKILL_TEXT[row.id] : null
+    if (text) {
+      for (const field of ['name', 'rule', 'evidence']) {
+        if (hasCjk(row[field])) row[field] = structuredClone(text[field])
+      }
+    }
+  }
+  for (const row of state.styles ?? []) {
+    if (row) row.accountKey = migrateKey(row.accountKey)
   }
   delete state.sampleLang
 }

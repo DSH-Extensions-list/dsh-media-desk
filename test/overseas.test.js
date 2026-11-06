@@ -1,9 +1,10 @@
-// 海外平台：链接识别、接口返回整理、Instagram 先查 ID 再读帖子。返回结构取自真实接口，只留用得到的字段。
+// Overseas platforms: link recognition, response normalisation, and Instagram's user-id lookup before reading posts.
+// The response shapes come from the real APIs; only the fields we use are kept.
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { fetchAccount, normalizePosts, normalizeProfile, parseAccountUrl } from '../src/monid.js'
 
-test('海外主页链接：TikTok、Instagram、X 认得出，帖子页和功能页不当成账号', () => {
+test('Overseas profile links: TikTok, Instagram and X are recognized, while post and feature pages are not accounts', () => {
   assert.deepEqual(parseAccountUrl('https://www.tiktok.com/@tiktok?lang=en'), { platform: 'TikTok', id: 'tiktok', url: 'https://www.tiktok.com/@tiktok' })
   assert.deepEqual(parseAccountUrl('https://www.instagram.com/instagram/'), { platform: 'Instagram', id: 'instagram', url: 'https://www.instagram.com/instagram/' })
   assert.equal(parseAccountUrl('https://twitter.com/X').platform, 'X')
@@ -13,7 +14,7 @@ test('海外主页链接：TikTok、Instagram、X 认得出，帖子页和功能
   }
 })
 
-test('海外平台的帖子和资料整理成统一字段', () => {
+test('Overseas platform posts and profiles normalize to the shared fields', () => {
   const [tt] = normalizePosts('TikTok', { status_code: 0, aweme_list: [{ aweme_id: '7702947070604332319', desc: 'already planning next halloween? 👀\nmore', create_time: 1793482137, author: { unique_id: 'tiktok' }, statistics: { play_count: 511307, digg_count: 6671, comment_count: 2166, collect_count: 628, share_count: 600 }, video: { cover: { url_list: ['https://p16.tiktokcdn.com/c.jpg'] } } }] })
   assert.equal(tt.url, 'https://www.tiktok.com/@tiktok/video/7702947070604332319')
   assert.equal(tt.title, 'already planning next halloween? 👀')
@@ -38,7 +39,7 @@ test('海外平台的帖子和资料整理成统一字段', () => {
   assert.throws(() => normalizePosts('TikTok', { status_code: 5, status_msg: 'user not found' }), /user not found/)
 })
 
-test('fetchAccount：Instagram 先查用户 ID 再读帖子；X 一次调用拿到帖子和资料', async () => {
+test('fetchAccount: Instagram looks up the user id before reading posts; X gets posts and profile in one call', async () => {
   const calls = []
   const run = async (args) => {
     const endpoint = args[args.indexOf('-e') + 1]

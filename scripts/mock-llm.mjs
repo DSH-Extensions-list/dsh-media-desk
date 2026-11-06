@@ -1,6 +1,8 @@
-// 本地模拟模型（OpenAI 兼容流式接口），只用于开发时验证模型链路，不消耗真实额度。
-// 也模拟图片接口：返回 assets 里的示例图，并故意延迟几秒，用来看生成过程。
-// 用法：node scripts/mock-llm.mjs [端口]。每次请求的摘要写到 stdout。
+// Local mock model (OpenAI-compatible streaming API) for checking the model path in
+// development. Uses no real quota.
+// It also mocks the image API: it returns sample images from assets/ and waits a few
+// seconds on purpose, so you can watch the generation happen.
+// Usage: node scripts/mock-llm.mjs [port]. A summary of each request goes to stdout.
 import { readFileSync, readdirSync } from 'node:fs'
 import { createServer } from 'node:http'
 
@@ -11,30 +13,34 @@ const SKETCHES = readdirSync(ASSETS).filter(name => /^(topo|stairs|facade)\.jpg$
 let served = 0
 
 function answer(system, user) {
-  if (system.includes('文风分析师')) {
-    return JSON.stringify({ name: '慢半拍', summary: '不急着下结论，先把场景讲清楚。', tone: '平静、好奇。', sentences: '长短交替，常用逗号断开。', opening: '从一个具体的早晨开始。', structure: '场景、疑问、一个小发现。', words: ['那天', '后来'], avoid: ['感叹号'], samples: ['那天早上我差点迟到，却停在了一块广告牌前。'] })
+  if (system.includes('You are a style analyst.')) {
+    return JSON.stringify({ name: 'Half a Beat Behind', summary: 'Sets the scene before drawing a conclusion.', tone: 'Calm and curious.', sentences: 'Alternates long and short, often split by commas.', opening: 'Opens on one specific morning.', structure: 'Scene, a question, one small discovery.', words: ['that day', 'later on'], avoid: ['exclamation marks'], samples: ['That morning I was almost late, and still stopped in front of a billboard.'] })
   }
-  if (system.includes('策划案')) {
-    return JSON.stringify({ title: '慢一点，也算到达', coverText: '慢，也算到达', facts: ['差点迟到 3 分钟'], outline: ['第一部分', '结尾'], cover: 'A lone commuter on an empty subway platform at dawn, soft golden light', characters: 'a young man in a grey jacket with a canvas backpack', images: [{ anchor: '第一部分', caption: '站台上的早晨', prompt: 'Morning light on a subway platform, one figure waiting' }, { anchor: '结尾', caption: '抬头那一刻', prompt: 'A person looks up at a billboard with quiet wonder' }], shots: [['特写', '广告牌上的一行字', '慢一点也算到达。', 'Close-up of a blank billboard corner'], ['中景', '他停下脚步抬头', '那天我差点迟到。', 'Medium shot from behind, man stops and looks up'], ['全景', '人潮从他身边涌过', '所有人都在赶路。', 'Wide shot, crowd rushing past a still man'], ['近景', '他笑了一下', '我忽然不急了。', 'Close shot of the man smiling faintly'], ['俯拍', '站台上的人流', '慢下来才看见路。', 'Top-down view of commuters on a platform'], ['中景', '他走上楼梯进入阳光', '你今天慢下来了吗？', 'Medium shot, man climbing stairs into sunlight']].map(([shot, visual, voice, prompt]) => ({ shot, visual, voice, seconds: 5, prompt })) })
+  if (system.includes('You are the content editor, art director and storyboard artist.')) {
+    return JSON.stringify({ title: 'Slow still counts as arriving', coverText: 'Slow still counts', facts: ['3 minutes from being late'], outline: ['The morning platform', 'The ending'], cover: 'A lone commuter on an empty subway platform at dawn, soft golden light', characters: 'a young man in a grey jacket with a canvas backpack', images: [{ anchor: 'The morning platform', caption: 'Morning on the platform', prompt: 'Morning light on a subway platform, one figure waiting' }, { anchor: 'The ending', caption: 'The moment he looks up', prompt: 'A person looks up at a billboard with quiet wonder' }], shots: [['Close-up', 'One line on the billboard', 'Slow still counts as arriving.', 'Close-up of a blank billboard corner'], ['Medium', 'He stops and looks up', 'That morning I was almost late.', 'Medium shot from behind, man stops and looks up'], ['Wide', 'The crowd flows past him', 'Everyone is rushing.', 'Wide shot, crowd rushing past a still man'], ['Close', 'He smiles a little', 'I stopped hurrying.', 'Close shot of the man smiling faintly'], ['Overhead', 'Commuters on the platform', 'You only see the way when you slow down.', 'Top-down view of commuters on a platform'], ['Medium', 'He climbs the stairs into sunlight', 'Did you slow down today?', 'Medium shot, man climbing stairs into sunlight']].map(([shot, visual, voice, prompt]) => ({ shot, visual, voice, seconds: 5, prompt })) })
   }
-  if (system.includes('只输出一个 JSON 对象')) {
-    const said = user.slice(user.lastIndexOf('用户说：') + 4)
+  if (system.includes('Output only one JSON object')) {
+    const said = user.slice(user.lastIndexOf('The user says: ') + 'The user says: '.length)
     const focus = /focusId: (\S+)/.exec(user)?.[1]
     if (user.includes('<production>')) {
-      return JSON.stringify({ reply: '标题改短了，第一个要点也换了说法，第 3 镜重画成俯拍。', ops: [], revise: { title: '慢一点，也算到', edits: [{ find: '要点一', replace: '第一点：先停下来' }], shots: [{ no: 3, shot: '俯拍', voice: '所有人都在赶路，只有他停住了。', prompt: 'Top-down view of a crowd flowing around one still man' }] } })
+      return JSON.stringify({ reply: 'Shortened the title, reworded the first point, and reshot frame 3 from overhead.', ops: [], revise: { title: 'Slow still gets you there', edits: [{ find: 'Point one', replace: 'First point: stop and look' }], shots: [{ no: 3, shot: 'Overhead', voice: 'Everyone is rushing; only he stops.', prompt: 'Top-down view of a crowd flowing around one still man' }] } })
     }
-    if (said.includes('排查错误')) return '这不是 JSON'
-    if (said.includes('写成脚本') && focus !== 'null') return JSON.stringify({ reply: '开始写脚本。', ops: [], actions: [{ type: 'draft', id: focus, format: 'script' }] })
+    // "troubleshoot" only exists to make the mock return broken JSON on purpose.
+    if (/troubleshoot/i.test(said)) return 'This is not JSON'
+    // Mirrors the drafting rule in src/intents.js: write|turn|make|produce|draft plus script|article|post|storyboard.
+    if (/\b(?:write|turn|make|produce|draft)\b.*\b(?:script|article|post|storyboard)\b/i.test(said) && focus !== 'null') {
+      return JSON.stringify({ reply: 'Starting on the script.', ops: [], actions: [{ type: 'draft', id: focus, format: 'script' }] })
+    }
     return JSON.stringify({
-      reply: '已经帮你补全成一个选题，并放进灵感墙。',
+      reply: 'Filled it out into a topic and put it on the idea wall.',
       ops: [
-        { op: 'add_item', kind: 'note', title: `补全后的选题：${said.slice(0, 16)}`, body: '模型补全的说明。', tags: ['模拟'], status: 'idea' },
-        { op: 'add_skill', name: '模拟规则', rule: '标题不超过 20 字', source: '对话', status: 'proposed', confidence: 0.6 },
+        { op: 'add_item', kind: 'note', title: `Filled-out topic: ${said.slice(0, 16)}`, body: 'Notes the model filled in.', tags: ['mock'], status: 'idea' },
+        { op: 'add_skill', name: 'Mock rule', rule: 'Keep titles under 20 words', source: 'Chat', status: 'proposed', confidence: 0.6 },
         { op: 'delete_item', id: 'not-a-real-id' },
       ],
     })
   }
-  return '# 模型写的标题\n\n那天早上我差点迟到，3 分钟后的地铁，我却停在了一块广告牌前。\n\n## 第一部分\n\n广告牌上只有一句话。这是流式写出的正文，用来验证打字效果，正式内容由真实模型生成。\n\n- 要点一\n- 要点二\n\n<script>window.__xss = 1</script>\n\n## 结尾\n\n只留一个行动：今天慢下来一次。\n'
+  return '# A title the mock wrote\n\nThat morning I was almost late. Three minutes to the train, and I stopped in front of a billboard.\n\n## The morning platform\n\nThere was one line on the billboard. This body text streams in to test the typing effect; the real model writes the final copy.\n\n- Point one\n- Point two\n\n<script>window.__xss = 1</script>\n\n## The ending\n\nLeave one action: slow down once today.\n'
 }
 
 createServer((req, res) => {
@@ -60,7 +66,7 @@ createServer((req, res) => {
     const system = messages.filter(m => m.role === 'system' || m.role === 'developer').map(flat).join('\n')
     const user = messages.filter(m => m.role === 'user').map(flat).join('\n')
     const text = answer(system, user)
-    console.log(JSON.stringify({ url: req.url, model: body.model, stream: body.stream, systemHead: system.slice(0, 30), hasRules: system.includes('开头先给数字'), hasVoice: system.includes('<voice>') }))
+    console.log(JSON.stringify({ url: req.url, model: body.model, stream: body.stream, systemHead: system.slice(0, 30), hasRules: system.includes('Lead with a number'), hasVoice: system.includes('<voice>') }))
     res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache' })
     const base = { id: 'mock', object: 'chat.completion.chunk', created: Math.floor(Date.now() / 1000), model: body.model }
     const send = choice => res.write(`data: ${JSON.stringify({ ...base, choices: [choice] })}\n\n`)

@@ -1,4 +1,4 @@
-// 把 client/ 打包成 DSH 的 lazy CommonJS 模块：react 留给宿主提供，CSS 内联成字符串。
+// Bundle client/ into a DSH lazy CommonJS module: react is left to the host, CSS is inlined as a string.
 import { build, context } from 'esbuild'
 import { readFile } from 'node:fs/promises'
 
