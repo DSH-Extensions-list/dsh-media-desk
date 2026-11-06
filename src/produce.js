@@ -1,5 +1,5 @@
-// 一键成稿流水线：文章 → 标题与画面规划 → 封面、配图、分镜。
-// 任务在 Host 里跑，关掉页面也不会中断；每生成一张图就落盘一次。
+// One-click drafting pipeline: article -> title and visual plan -> cover, images, storyboard.
+// The job runs in the Host, so closing the page doesn't stop it, and every generated image is written to disk once.
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { articlePrompts, extractJson, fallbackArticle, fallbackPlan, planPrompts, shortCoverText } from './ai.js'
@@ -9,7 +9,7 @@ import { newId } from './ops.js'
 import { imageReady } from './settings.js'
 
 const CONCURRENCY = 3
-// 模型卡住不出字时，到点改用草稿，不让进度条一直转
+// If the model stalls without emitting text, switch to the draft on time so the progress bar doesn't spin forever
 const TEXT_TIMEOUT_MS = 240_000
 const RETRY_WAIT_MS = [6000, 14000]
 
@@ -19,7 +19,7 @@ function splitTitle(markdown, fallback) {
   return { title: match[1].trim(), article: markdown.slice(match[0].length).trim() }
 }
 
-/** 模型给的规划不可信：只取需要的字段，数量按设置截断。 */
+/** Model plans are untrusted: keep only the fields we need and cut the counts to the settings. */
 export function normalizePlan(plan, settings, title) {
   const text = (value, max = 400) => (typeof value === 'string' ? value.trim().slice(0, max) : '')
   const images = (Array.isArray(plan?.images) ? plan.images : []).slice(0, settings.imageCount).map(row => ({ caption: text(row?.caption, 60), anchor: text(row?.anchor, 60), prompt: text(row?.prompt, 1200) })).filter(row => row.prompt)
@@ -60,11 +60,12 @@ function fullPrompt(production, target, asset) {
 }
 
 /**
- * 把对话里的修改落到成稿上。模型输出不可信：只认这几个字段，序号越界的直接丢弃。
- * @param {object} production - 成稿，会被就地修改。
- * @param {object} revise - 模型给出的修改。
- * @param {{canDraw?: boolean}} [options] - 没接生图时，回执只说更新了画面描述。
- * @returns {{receipts: string[], errors: string[], targets: string[]}} 回执和需要重画的图。
+ * Apply edits from the conversation to the finished draft. Model output is untrusted: only these
+ * fields are read, and out-of-range indices are dropped.
+ * @param {object} production - The draft; mutated in place.
+ * @param {object} revise - The edits the model returned.
+ * @param {{canDraw?: boolean}} [options] - Without an image model, receipts only say the description was updated.
+ * @returns {{receipts: string[], errors: string[], targets: string[]}} Receipts and the images that need redrawing.
  */
 export function applyRevision(production, revise, { canDraw = true } = {}) {
   const receipts = []
@@ -136,7 +137,7 @@ export function applyRevision(production, revise, { canDraw = true } = {}) {
 
 export class Producer {
   /**
-   * @param {{store: object, settings: object, callText: Function, generate: Function}} deps - 存储、设置、文本模型和生图函数。
+   * @param {{store: object, settings: object, callText: Function, generate: Function}} deps - Store, settings, text model and image generator.
    */
   constructor({ store, settings, callText, generate }) {
     this.store = store
@@ -154,7 +155,7 @@ export class Producer {
   status(id) {
     const job = this.jobs.get(id)
     if (!job) return { running: false }
-    // 策划案是流式写出来的：标题和分镜一出现就先显示
+    // The plan streams in: show the title and shots as soon as they appear
     const plan = job.planText
     return {
       running: true,
@@ -180,12 +181,12 @@ export class Producer {
     if (!item) throw Object.assign(new Error(tr('Can\'t find this idea')), { status: 404 })
     const job = { stage: 'brief', text: '', planText: '', controller: new AbortController() }
     this.jobs.set(id, job)
-    await this.store.mutate('开始成稿', (draft) => {
+    await this.store.mutate('Start drafting', (draft) => {
       const target = draft.items.find(row => row.id === id)
       target.production = { status: 'running', stage: 'brief', startedAt: new Date().toISOString(), title: target.title, article: '', cover: null, images: [], shots: [] }
       return draft
     }, { undoable: false })
-    // 不等待：浏览器靠轮询拿进度
+    // Don't await: the browser polls for progress
     this.run(id, job).catch(() => {}).finally(() => this.jobs.delete(id))
     return true
   }
@@ -214,7 +215,7 @@ export class Producer {
         if (signal.aborted) throw err
         plan = backup
       }
-      // 模型漏掉配图或分镜时用模板补上，流水线不能因此少一块
+      // Backfill images or shots the model left out from the template; the pipeline must not lose a piece
       if (plan.images.length < settings.imageCount) plan.images = [...plan.images, ...backup.images.slice(plan.images.length)]
       if (plan.shots.length < settings.shotCount) plan.shots = [...plan.shots, ...backup.shots.slice(plan.shots.length).map((row, i) => ({ ...row, no: plan.shots.length + i + 1 }))]
 
@@ -234,7 +235,7 @@ export class Producer {
         if (!ready) production.needsProvider = true
       })
 
-      // 策划案定了之后，文章和所有画面同时开工
+      // Once the plan is settled, the article and all the visuals start together
       const writeArticle = async () => {
         let engine = 'local'
         let notice = null
@@ -276,7 +277,7 @@ export class Producer {
       await Promise.all(tasks)
       if (signal.aborted) throw new Error('cancelled')
 
-      await this.store.mutate('完成成稿', (draft) => {
+      await this.store.mutate('Finish drafting', (draft) => {
         const target = draft.items.find(row => row.id === id)
         if (!target?.production) return draft
         target.production.status = 'done'
@@ -298,7 +299,7 @@ export class Producer {
     }
   }
 
-  /** 生图服务限流（429）时等一会儿再试，最多再试两次；其他错误直接报。 */
+  /** When the image service rate-limits (429), wait and retry at most twice; report anything else straight away. */
   async generateWithRetry(image, prompt, signal) {
     for (let attempt = 0; ; attempt += 1) {
       try {
@@ -345,7 +346,7 @@ export class Producer {
     }
   }
 
-  /** 单独重画一张。 */
+  /** Redraw a single asset. */
   async regenerate(id, target) {
     const settings = await this.settings.read()
     if (!imageReady(settings)) throw Object.assign(new Error(tr('No image model is connected yet')), { status: 400 })
@@ -360,8 +361,7 @@ export class Producer {
     this.renderAsset(id, target, settings).catch(() => {}).finally(() => this.assets.delete(key))
   }
 
-  /** Host 重启后，没人在跑的「进行中」不能一直转圈。 */
-  /** Host 重启后，把上次没做完的成稿都标成中断，卡片不会一直显示「正在成稿」。 */
+  /** After a Host restart, mark drafts left running last time as interrupted so cards stop showing "drafting". */
   async settleAll() {
     const state = await this.store.read()
     for (const item of state.items) if (item.production?.status === 'running') await this.settle(item.id)

@@ -1,4 +1,4 @@
-// 点开灵感后的工作区：左边对话，右边是一张稿面。稿面的格子一开始就排好，同时开工，一点点长满。
+// The workspace behind an idea: chat on the left, a sheet on the right. The sheet's tiles are laid out up front and fill in as the work lands.
 import React from 'react'
 import { ChatPanel } from './chat.jsx'
 import { downloadCover } from './cover.js'
@@ -37,7 +37,7 @@ function askAbout(label, text = '') {
   setDesk({ chatQuote: { label, text }, studioDock: true })
 }
 
-/** 一张图。空的时候只有底色和淡淡的记号，不放文字。 */
+/** One image. While it's empty it shows only a wash and a faint mark, never text. */
 function Plate({ asset, paper = false, mark = null, alt = '', onOpen, onRetry }) {
   const status = asset?.status ?? 'idle'
   const clickable = Boolean(asset?.src && onOpen)
@@ -51,7 +51,7 @@ function Plate({ asset, paper = false, mark = null, alt = '', onOpen, onRetry })
   )
 }
 
-/** 进度：放在对话栏里，像助手在汇报。 */
+/** Progress, inside the chat panel: reads like the assistant reporting back. */
 function ProgressCard({ production, live, settings }) {
   const running = production.status === 'running'
   const ready = settings?.imageReady
@@ -81,7 +81,7 @@ function ProgressCard({ production, live, settings }) {
   )
 }
 
-/** 对话栏顶部：这条灵感，以及唯一的入口。 */
+/** Top of the chat panel: this idea, and the one way in. */
 function IdeaCard({ item, live, settings }) {
   const production = item.production
   const running = production?.status === 'running'
@@ -110,7 +110,7 @@ function IdeaCard({ item, live, settings }) {
   )
 }
 
-/** 视频封面：画面叠大字。没有画面时是一张渐变的纯文字封面。 */
+/** Video cover: big text over the frame. Without a frame it's a gradient type-only cover. */
 function Poster({ production, item, onOpen, onRetry }) {
   const src = production?.cover?.src ?? (!production ? item.media?.poster ?? (item.media?.src && item.kind !== 'video' ? item.media.src : null) : null)
   const text = production?.stage === 'brief' ? '' : production?.coverText || production?.title || ''
@@ -128,7 +128,7 @@ function Stat({ icon, value, unit }) {
   return <span className="md-hero-stat"><Icon name={icon} size={13} /><b>{value}</b>{unit}</span>
 }
 
-/** 主视觉：渐变底、大标题、数字，右边是视频封面和配图的拼贴。 */
+/** Hero: gradient background, big title, numbers, with the cover and figures collaged on the right. */
 function HeroTile({ item, live, onView }) {
   const settings = useDesk(s => s.settings)
   const production = item.production
@@ -178,7 +178,7 @@ function HeroTile({ item, live, onView }) {
             <button type="button" className="md-pill" onClick={() => downloadCover({ src: production.cover?.src, text: production.coverText || production.title }, production.title).catch(err => toast(err.message, { error: true }))}><Icon name="image" size={14} />{t('Download cover')}</button>
             <label className="md-pill md-date-pill">
               <Icon name="calendar" size={14} />{item.scheduledAt ? fmtWhen(item.scheduledAt) : t('Schedule')}
-              <input type="datetime-local" aria-label={t('Schedule')} value={toLocalInput(item.scheduledAt)} onClick={(event) => { try { event.currentTarget.showPicker() } catch { /* 不支持时用原生交互 */ } }} onChange={(event) => {
+              <input type="datetime-local" aria-label={t('Schedule')} value={toLocalInput(item.scheduledAt)} onClick={(event) => { try { event.currentTarget.showPicker() } catch { /* fall back to the native picker */ } }} onChange={(event) => {
                 const when = event.target.value ? new Date(event.target.value).toISOString() : null
                 dispatchOps([{ op: 'schedule_item', id: item.id, scheduledAt: when }], { label: t('Reschedule'), silent: true })
               }} />
@@ -203,7 +203,7 @@ function HeroTile({ item, live, onView }) {
   )
 }
 
-/** 把配图插回文章：优先放到对应小标题那一节的末尾。 */
+/** Put figures back into the article, preferring the end of the section their heading names. */
 function ArticleBody({ production, text, onView }) {
   const sections = React.useMemo(() => text.split(/\n(?=##\s)/).map(part => ({ text: part, heading: /^##\s+(.+)/.exec(part)?.[1]?.trim() ?? '' })), [text])
   const images = production?.images ?? []
@@ -222,7 +222,7 @@ function ArticleBody({ production, text, onView }) {
     <div className="md-article">
       {sections.map((section, index) => (
         <React.Fragment key={index}>
-          {/* renderMarkdown 会先转义，模型输出里的 HTML 不会执行 */}
+          {/* renderMarkdown escapes first, so HTML in model output never runs */}
           <div className="md-prose" dangerouslySetInnerHTML={{ __html: renderMarkdown(section.text) }} />
           {(placed.get(index) ?? []).map(({ image, i }) => (
             <figure key={i} className="md-article-figure">
@@ -250,7 +250,7 @@ function ArticleTile({ item, live, open, onToggle, onView, tileRef }) {
   React.useEffect(() => {
     if (streaming && scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight
   }, [text, streaming])
-  // 写完之后回到开头，从第一句读起
+  // Back to the top once writing finishes, so reading starts at the first line
   React.useEffect(() => {
     if (article && scroller.current) scroller.current.scrollTop = 0
   }, [Boolean(article)]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -262,7 +262,7 @@ function ArticleTile({ item, live, open, onToggle, onView, tileRef }) {
     await navigator.clipboard.writeText(article)
     toast(t('Script copied'))
   }
-  // 选中一段，交给助手改
+  // Select a passage and hand it to the assistant
   const onMouseUp = () => {
     const selection = window.getSelection()
     const value = selection?.toString().trim()
@@ -313,10 +313,10 @@ function ShotsTile({ item, live, count, open, onToggle, onView }) {
   const imageReady = useDesk(s => s.settings?.imageReady)
   const shots = item.production?.shots ?? []
   const visuals = live?.visuals ?? []
-  // 策划案还在写的时候，分镜说明已经一格一格出现了
+  // While the outline is still being written, shot descriptions appear cell by cell
   const cells = shots.length ? shots : Array.from({ length: count }, (_, i) => ({ no: i + 1, visual: visuals[i] ? unescapeJson(visuals[i]) : '', status: item.production?.status === 'running' ? 'pending' : 'idle' }))
   const copy = async () => {
-    const table = shots.map((s, i) => t('{no}. {shot}｜{sec} 秒\n画面：{visual}\n口播：{voice}', { no: i + 1, shot: t(s.shot), sec: s.seconds, visual: s.visual, voice: s.voice })).join('\n\n')
+    const table = shots.map((s, i) => t('{no}. {shot} · {sec}s\nVisual: {visual}\nVoice-over: {voice}', { no: i + 1, shot: t(s.shot), sec: s.seconds, visual: s.visual, voice: s.voice })).join('\n\n')
     await navigator.clipboard.writeText(table)
     toast(t('Storyboard copied'))
   }
@@ -357,7 +357,7 @@ function assetList(production) {
   ]
 }
 
-/** 查看大图：左右键切换，可以重画、下载，或者让助手改。 */
+/** Full-size viewer: arrow keys to switch, redraw, download, or ask the assistant to change it. */
 function Viewer({ item, target, onChange, onClose }) {
   const imageReady = useDesk(s => s.settings?.imageReady)
   const list = assetList(item.production).filter(row => row.asset?.src || isBusy(row.asset))
@@ -436,7 +436,7 @@ function Sheet({ item, live }) {
   }, [])
   const toggle = name => (open === name ? collapse() : expand(name))
 
-  // 格子从原位放大到铺满
+  // Expand the tile from its place to fill the sheet
   React.useLayoutEffect(() => {
     if (!open || reducedMotion()) return
     const box = bento.current.getBoundingClientRect()
@@ -478,7 +478,7 @@ function Sheet({ item, live }) {
   )
 }
 
-const DONE_SUGGESTIONS = ['Shorter title', 'Lighter tone', 'Stronger opening', 'Bolder cover text']
+const DONE_SUGGESTIONS = ['Make the title shorter', 'Lighten the tone', 'Open with a stronger line', 'Make the cover text punchier']
 
 export function Studio() {
   const id = useDesk(s => s.focusId)
@@ -497,7 +497,7 @@ export function Studio() {
     return undefined
   }, [id, watching])
 
-  // 从卡片的位置展开成整个工作区
+  // Open from the card's position into the whole workspace
   React.useLayoutEffect(() => {
     const el = ref.current
     if (!id || !el || reducedMotion()) return
@@ -508,21 +508,21 @@ export function Studio() {
     } else {
       el.animate([{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], { duration: 320, easing: 'ease-out' })
     }
-    // 只在切换灵感时播放
+    // Only play when switching ideas
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   React.useEffect(() => {
     if (!id) return undefined
     const onKey = (event) => {
-      // 有格子放大或大图打开时，Esc 只收回它们
+      // When a tile is expanded or the viewer is open, Esc only closes those
       if (event.key === 'Escape' && !event.defaultPrevented && !document.querySelector('.md-tile.is-open,.md-viewer') && !/^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) closeItem()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [id])
 
-  // 打开的这条被删掉或撤销掉时，退回灵感墙，不留空白页
+  // When the open idea is deleted or undone away, fall back to the wall instead of a blank page
   React.useEffect(() => { if (id && !item) closeItem() }, [id, item])
   if (!item) return null
   return (

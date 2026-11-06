@@ -1,4 +1,4 @@
-// 开放式生图接入：任何兼容 OpenAI Images API 的服务都能用，由用户自己填地址、模型和密钥。
+// Open image generation: any service compatible with the OpenAI Images API works; the user supplies the endpoint, model and key.
 import { assertPublicUrl } from './harvest.js'
 import { tr } from './i18n.js'
 
@@ -39,14 +39,14 @@ async function requestOnce(image, prompt, fetchImpl, signal) {
   try {
     data = JSON.parse(raw)
   } catch {
-    // 网关偶尔返回 HTML 错误页
+    // Gateways sometimes return an HTML error page
   }
   if (!res.ok) {
     const error = new Error(explain(res.status, redact(data?.error?.message ?? data?.message ?? '', image.apiKey)))
     error.retryable = res.status >= 500
     throw error
   }
-  // OpenAI 系放在 data[0]，部分国内服务放在 images[0]
+  // OpenAI-style services put the result in data[0]; some others use images[0]
   const entry = data?.data?.[0] ?? data?.images?.[0]
   if (entry?.b64_json) return { buffer: Buffer.from(entry.b64_json, 'base64'), revisedPrompt: entry.revised_prompt }
   if (entry?.url) {
@@ -61,11 +61,11 @@ async function requestOnce(image, prompt, fetchImpl, signal) {
 }
 
 /**
- * 生成一张图。网关抖动时自动重试一次。
- * @param {object} image - 设置里的生图配置。
- * @param {string} prompt - 提示词。
+ * Generate one image. Retries once when the gateway hiccups.
+ * @param {object} image - Image settings.
+ * @param {string} prompt - The prompt.
  * @param {{fetchImpl?: typeof fetch, signal?: AbortSignal}} [options]
- * @returns {Promise<{buffer: Buffer, ext: string}>} 图片内容和扩展名。
+ * @returns {Promise<{buffer: Buffer, ext: string}>} Image bytes and extension.
  */
 export async function generateImage(image, prompt, { fetchImpl = fetch, signal } = {}) {
   let lastError = null

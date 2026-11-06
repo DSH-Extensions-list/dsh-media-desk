@@ -1,5 +1,5 @@
-// 持久化：$DSH_HOME/media-desk/state.json。桌面端和 Web 端读同一份数据。
-// 两个 Host 进程可能同时运行，所以每次写入前都按 mtime 判断是否需要重读。
+// Persistence: $DSH_HOME/media-desk/state.json. The desktop app and the web UI read the same file.
+// Two Host processes can run at once, so every write checks the mtime before re-reading.
 import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -14,11 +14,11 @@ const keyed = list => list.every(row => isObject(row) && typeof row.id === 'stri
 function revertList(before, after, current) {
   const was = new Map(before.map(row => [row.id, row]))
   const now = new Map(after.map(row => [row.id, row]))
-  // 这一步新增的行撤掉，两边都有的行逐字段撤回，其余（之后才加的）原样保留
+  // Drop rows this step added, roll back shared rows field by field, keep everything added later
   const result = current
     .filter(row => !(now.has(row.id) && !was.has(row.id)))
     .map(row => (was.has(row.id) && now.has(row.id) ? revertChange(was.get(row.id), now.get(row.id), row) : row))
-  // 这一步删掉的行放回原来的位置
+  // Put rows this step deleted back where they were
   const present = new Set(result.map(row => row.id))
   before.forEach((row, index) => {
     if (now.has(row.id) || present.has(row.id)) return
@@ -29,12 +29,13 @@ function revertList(before, after, current) {
 }
 
 /**
- * 三方合并式撤销：只撤回这一步改过、之后又没被别的操作改动的部分。
- * 撤销「切换风格」不会抹掉之后生成的成稿；撤销「对话改标题」不会把之后画好的图退回去。
- * @param {*} before - 这一步之前的值。
- * @param {*} after - 这一步之后的值。
- * @param {*} current - 现在的值。
- * @returns {*} 撤销后的值。
+ * Three-way undo: revert only what this step changed and nothing has touched since.
+ * Undoing a style switch won't erase a draft produced afterwards; undoing a chat
+ * title edit won't roll back an image drawn later.
+ * @param {*} before - Value before the step.
+ * @param {*} after - Value after the step.
+ * @param {*} current - Value now.
+ * @returns {*} The reverted value.
  */
 export function revertChange(before, after, current) {
   if (same(before, after)) return current
@@ -52,7 +53,7 @@ export function revertChange(before, after, current) {
     if (keyed(before) && keyed(after) && keyed(current) && (before.length || after.length)) return revertList(before, after, current)
     if (before.length === after.length && after.length === current.length) return current.map((row, index) => revertChange(before[index], after[index], row))
   }
-  // 之后又被改过且无法逐项合并时，保留现在的值
+  // Changed again since and not mergeable item by item: keep the current value
   return current
 }
 
@@ -96,7 +97,7 @@ export class Store {
     this.mtimeMs = (await stat(this.file)).mtimeMs
   }
 
-  /** 串行执行，避免同一进程内的并发写互相覆盖。 */
+  /** Serialise work so concurrent writes in one process don't overwrite each other. */
   run(task) {
     const next = this.queue.then(task, task)
     this.queue = next.catch(() => {})
@@ -111,10 +112,10 @@ export class Store {
   }
 
   /**
-   * @param {string} label - 显示在撤销入口上的说明。
-   * @param {(state: object) => any} mutate - 就地修改状态。
+   * @param {string} label - Text shown on the undo entry.
+   * @param {(state: object) => any} mutate - Modify the state in place.
    * @param {{undoable?: boolean}} [options]
-   * @returns {Promise<any>} mutate 的返回值。
+   * @returns {Promise<any>} Whatever mutate returns.
    */
   mutate(label, mutate, { undoable = true } = {}) {
     return this.run(async () => {
@@ -123,7 +124,7 @@ export class Store {
       const result = await mutate(this.state)
       if (undoable) {
         const after = JSON.stringify(this.state)
-        // 什么都没改的操作不占撤销位，免得用户点撤销却没反应
+        // A step that changed nothing takes no undo slot, so Undo never looks dead
         if (after !== before) {
           this.undo.push({ label, before, after })
           if (this.undo.length > MAX_UNDO) this.undo.shift()

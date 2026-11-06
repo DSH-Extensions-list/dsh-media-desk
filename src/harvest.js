@@ -1,4 +1,5 @@
-// 抓取网页和个人主页的公开信息。只读公开 HTML，不登录，也不绕过平台限制。
+// Read public information from web pages and profile pages. Public HTML only:
+// no login, and no working around a platform's restrictions.
 import { lookup } from 'node:dns/promises'
 import { isIP } from 'node:net'
 import { tr } from './i18n.js'
@@ -12,7 +13,7 @@ function isPrivateAddress(address) {
   const lower = address.toLowerCase()
   if (lower.startsWith('fe80') || lower.startsWith('fc') || lower.startsWith('fd')) return true
   let v4 = lower.startsWith('::ffff:') ? lower.slice(7) : lower
-  // URL 解析器会把 ::ffff:127.0.0.1 规范化成 ::ffff:7f00:1
+  // The URL parser normalises ::ffff:127.0.0.1 to ::ffff:7f00:1, so check the hex form too.
   const mapped = /^([\da-f]{1,4}):([\da-f]{1,4})$/.exec(v4)
   if (mapped) {
     const high = parseInt(mapped[1], 16)
@@ -24,7 +25,7 @@ function isPrivateAddress(address) {
   return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)
 }
 
-/** 粘贴的链接可能来自任何地方，不能让它访问本机或内网服务。 */
+/** A pasted link can point anywhere, so it must never reach this machine or the local network. */
 export async function assertPublicUrl(raw) {
   const url = new URL(raw)
   if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error(tr('Only http and https links are supported'))
@@ -55,9 +56,9 @@ function meta(html, names) {
 }
 
 function followerHint(text) {
-  const m = /([\d.,]+)\s*(万|千|k|K|m|M)?\s*(?:粉丝|关注者|followers)/.exec(text) ?? /(?:粉丝|followers)[^\d]{0,6}([\d.,]+)\s*(万|千|k|K|m|M)?/.exec(text)
+  const m = /([\d.,]+)\s*(k|K|m|M)?\s*followers/i.exec(text) ?? /followers[^\d]{0,6}([\d.,]+)\s*(k|K|m|M)?/i.exec(text)
   if (!m) return null
-  const unit = { 万: 1e4, 千: 1e3, k: 1e3, K: 1e3, m: 1e6, M: 1e6 }[m[2]] ?? 1
+  const unit = { k: 1e3, m: 1e6 }[String(m[2] ?? '').toLowerCase()] ?? 1
   const value = Number(m[1].replace(/,/g, '')) * unit
   return Number.isFinite(value) ? Math.round(value) : null
 }
@@ -98,10 +99,10 @@ async function readHtml(raw, fetchImpl) {
 }
 
 /**
- * 抓一个公开页面的正文，用来提炼风格。
- * @param {string} raw - 页面地址。
- * @param {typeof fetch} [fetchImpl] - 便于测试替换。
- * @returns {Promise<{url: string, title: string|null, text: string}>} 页面文字。
+ * Fetch the body text of a public page, to learn a writing style from it.
+ * @param {string} raw - Page URL.
+ * @param {typeof fetch} [fetchImpl] - Swappable in tests.
+ * @returns {Promise<{url: string, title: string|null, text: string}>} The page text.
  */
 export async function harvestText(raw, fetchImpl = fetch) {
   const { html, url } = await readHtml(raw, fetchImpl)
@@ -116,10 +117,10 @@ export async function harvestText(raw, fetchImpl = fetch) {
 }
 
 /**
- * 读取一个公开页面的标题、简介、封面和可见的粉丝数。
- * @param {string} raw - 页面地址。
- * @param {typeof fetch} [fetchImpl] - 便于测试替换。
- * @returns {Promise<{url: string, title: string|null, description: string|null, image: string|null, siteName: string|null, followers: number|null}>} 页面信息。
+ * Read a public page's title, description, cover image and any visible follower count.
+ * @param {string} raw - Page URL.
+ * @param {typeof fetch} [fetchImpl] - Swappable in tests.
+ * @returns {Promise<{url: string, title: string|null, description: string|null, image: string|null, siteName: string|null, followers: number|null}>} Page metadata.
  */
 export async function harvest(raw, fetchImpl = fetch) {
   const { html, url } = await readHtml(raw, fetchImpl)

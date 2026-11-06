@@ -1,4 +1,4 @@
-// dsh-media-desk host 半片：/media-desk/* 接口、文件服务和模型调用。
+// The host half of dsh-media-desk: /media-desk/* routes, file serving and model calls.
 import { createReadStream } from 'node:fs'
 import { execFile } from 'node:child_process'
 import { stat, writeFile } from 'node:fs/promises'
@@ -16,8 +16,7 @@ import { applyRevision, Producer } from './produce.js'
 import { publicSettings, Settings, imageReady } from './settings.js'
 import { normalizeStyle, stylePrompts } from './style.js'
 import { dshHome, Store } from './store.js'
-import { currentLang, platformName, tr, withLang } from './i18n.js'
-import { localizeSamples, samplesNeedLocale } from './seed.js'
+import { tr } from './i18n.js'
 
 const ASSETS_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'assets')
 const MAX_JSON = 4_000_000
@@ -53,7 +52,7 @@ async function readJson(req) {
   }
 }
 
-/** 支持 Range，视频才能正常拖动和循环。 */
+/** Range support, so videos can scrub and loop properly. */
 async function sendFile(req, res, file) {
   const type = MIME[extname(file).toLowerCase()]
   if (!type) return json(res, 404, { error: tr('Unsupported file type') })
@@ -92,7 +91,7 @@ function engineLabel(ctx) {
   return info ? info.label : null
 }
 
-/** 同一次故障只提醒一次，用人话说。原始错误放在模型状态的提示里。 */
+/** Report an outage once per failure, in plain words. The raw error goes in the model status tooltip. */
 function outageNotice(ctx, wasDown, fallback) {
   if (wasDown) return null
   return modelInfo(ctx) ? tr('The model is unavailable right now, so {fallback}. You can check your account or key in settings.', { fallback }) : tr('No model is connected, so {fallback}.', { fallback })
@@ -118,7 +117,7 @@ async function chatTurn(ctx, store, desk, body) {
       plan = extractJson(text)
       if (typeof plan.reply !== 'string') plan.reply = tr('Done.')
     } catch {
-      // 模型只回了一段话时，当成普通回答，不算失败
+      // A model that replies with plain prose is answering, not failing
       plan = { reply: text.trim().slice(0, 1200) || tr('I didn\'t catch that. Could you put it another way?'), ops: [] }
     }
   } catch {
@@ -127,11 +126,11 @@ async function chatTurn(ctx, store, desk, body) {
   }
   const settings = await desk.settings.read()
   const canDraw = imageReady(settings)
-  // 只把真正改了数据的那一步放进撤销；问一句话不占撤销位
+  // Only a step that changed data earns an undo slot; asking a question does not
   const changed = await store.mutate(tr('Chat: {text}', { text: message.slice(0, 18) }), (draft) => {
     const target = focusId ? draft.items.find(row => row.id === focusId) : null
     const production = target?.production?.status === 'done' ? target.production : null
-    // 本地规则只会改灵感标题；有成稿时要改的是成稿标题
+    // Local rules only touch the idea title; once there's a draft, its title is the one to change
     const ops = (Array.isArray(plan.ops) ? plan.ops : []).map((op) => {
       if (production && op?.op === 'update_item' && op.id === focusId && typeof op.title === 'string') return { op: 'update_production', id: focusId, title: op.title }
       return op
@@ -139,7 +138,7 @@ async function chatTurn(ctx, store, desk, body) {
     const { receipts, errors } = applyOps(draft, ops)
     let targets = []
     if (production && plan.revise) {
-      // 没接生图时，图不会重画，回执要说实话
+      // Without an image model nothing gets redrawn, so the receipt should say so
       const revision = applyRevision(production, plan.revise, { canDraw })
       receipts.push(...revision.receipts.map(text => ({ text })))
       errors.push(...revision.errors)
@@ -147,11 +146,11 @@ async function chatTurn(ctx, store, desk, body) {
     }
     return { receipts, errors, targets, done: Boolean(production) }
   })
-  const result = await store.mutate('对话记录', (draft) => {
+  const result = await store.mutate('Chat log', (draft) => {
     const { receipts, errors, targets, done } = changed
     const at = new Date().toISOString()
     const itemId = focusId ?? undefined
-    // 已经做好的成稿不会因为一句话被整篇重做，要重做请点「重新成稿」
+    // A finished draft isn't rebuilt from one message; that's what Redraft is for
     const actions = (Array.isArray(plan.actions) ? plan.actions : [])
       .filter(a => a && ['produce', 'open', 'nav'].includes(a.type))
       .filter(a => !(a.type === 'produce' && (done && a.id === focusId || draft.items.find(row => row.id === a.id)?.production?.status === 'done')))
@@ -178,7 +177,7 @@ async function extractStyle(ctx, store, body) {
       if (page.text.length >= 80) parts.push(`${page.title ?? ''}\n${page.text}`)
       else failures.push(tr('{url}: there is almost no text on the page. It may require sign-in.', { url }))
     } catch (err) {
-      failures.push(tr('{url}：{error}', { url, error: err.message }))
+      failures.push(tr('{url}: {error}', { url, error: err.message }))
     }
   }
   const material = parts.join('\n\n---\n\n')
@@ -190,7 +189,7 @@ async function extractStyle(ctx, store, body) {
   return styleFromMaterial(ctx, store, { material, name, source, sourceUrls: urls, failures })
 }
 
-/** 提炼一张风格卡并设为当前风格。同一个账号再抓一次时更新原来那张。 */
+/** Learn a style card and make it active. Re-importing the same account updates the existing card. */
 async function styleFromMaterial(ctx, store, { material, name, source, sourceUrls = [], failures = [], accountKey = null }) {
   let style
   try {
@@ -210,7 +209,7 @@ async function styleFromMaterial(ctx, store, { material, name, source, sourceUrl
   })
 }
 
-/** 导入用户自己的账号。钱花在 Monid 上，所以先把内容存好，提炼失败也不会白花。 */
+/** Import the user's own account. Monid charges per request, so save the content first: a failed style extraction still leaves the import worth the spend. */
 async function importAccountRoute(ctx, store, desk, body) {
   if (desk.importing) throw Object.assign(new Error(tr('Another account is still importing. Try again when it finishes.')), { status: 409 })
   desk.importing = true
@@ -218,13 +217,13 @@ async function importAccountRoute(ctx, store, desk, body) {
     const account = await resolveAccount(body.text)
     const { posts, profile, cost } = await fetchAccount(account, desk.monid)
     const covers = await saveCovers(posts, account.platform, await store.read(), store.filesDir)
-    const added = await store.mutate(tr('Import {platform} account', { platform: platformName(account.platform) }), draft => importPosts(draft, { account, profile, posts, covers }).added)
-    const nickname = profile.nickname || platformName(account.platform)
+    const added = await store.mutate(tr('Import {platform} account', { platform: account.platform }), draft => importPosts(draft, { account, profile, posts, covers }).added)
+    const nickname = profile.nickname || account.platform
     let styleError = null
     const material = postsToMaterial(posts)
     if (material.length >= 80) {
       try {
-        await styleFromMaterial(ctx, store, { material, name: nickname, source: tr('{platform} account', { platform: platformName(account.platform) }), sourceUrls: [account.url], accountKey: `${account.platform}:${account.id}` })
+        await styleFromMaterial(ctx, store, { material, name: nickname, source: tr('{platform} account', { platform: account.platform }), sourceUrls: [account.url], accountKey: `${account.platform}:${account.id}` })
       } catch (err) {
         styleError = err.message
       }
@@ -297,9 +296,7 @@ async function route(ctx, store, desk, req, res) {
   if (method === 'GET') {
     if (path === 'state') {
       if (!desk.settled) { desk.settled = true; await desk.producer.settleAll().catch(() => {}) }
-      let state = await store.read()
-      // 示例数据跟着界面语言走；用户自己的内容不动
-      if (samplesNeedLocale(state, currentLang())) state = await store.mutate('', draft => (localizeSamples(draft, currentLang()), draft), { undoable: false })
+      const state = await store.read()
       return json(res, 200, { state, model: engineLabel(ctx), modelOk: modelStatus.ok, modelError: modelStatus.error, canUndo: store.undo.length > 0 })
     }
     if (path === 'production') {
@@ -316,7 +313,7 @@ async function route(ctx, store, desk, req, res) {
   }
   if (method !== 'POST') return json(res, 405, { error: tr('Method not allowed') })
 
-  // 所有写操作都拒绝跨站请求
+  // Every write rejects cross-site requests
   const site = req.headers['sec-fetch-site']
   if (site && site !== 'same-origin' && site !== 'none') return json(res, 403, { error: tr('Cross-site request refused') })
 
@@ -356,12 +353,12 @@ async function route(ctx, store, desk, req, res) {
       const item = state.items.find(row => row.id === body.id)
       if (!item?.production?.article) return json(res, 400, { error: tr('Nothing drafted to save yet') })
       await store.read()
-      // 视频封面由浏览器合成（画面叠大字），这里只接受 JPEG
+      // The browser composites the video cover (big text over the frame), so accept JPEG only here
       const match = /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(body.videoCover ?? '')
       const videoCover = match ? Buffer.from(match[1], 'base64') : null
       if (videoCover && !(videoCover[0] === 0xff && videoCover[1] === 0xd8)) return json(res, 400, { error: tr('The cover isn\'t a valid image') })
       const saved = await saveProduction(item.production, { filesDir: store.filesDir, exportDir: resolveExportDir(settings.exportDir), videoCover })
-      const next = await store.mutate('保存成稿', (draft) => {
+      const next = await store.mutate('Save draft', (draft) => {
         const target = draft.items.find(row => row.id === body.id)
         if (target?.production) {
           target.production.savedPath = saved.path
@@ -372,7 +369,7 @@ async function route(ctx, store, desk, req, res) {
       return json(res, 200, { ...saved, state: next })
     }
     case 'produce/reveal': {
-      // 路径只取自保存记录，不接受请求里传来的路径
+      // Take the path from the saved record only, never from the request
       const state = await store.read()
       const path = state.items.find(row => row.id === body.id)?.production?.savedPath
       if (!path) return json(res, 400, { error: tr('Not saved yet') })
@@ -399,7 +396,7 @@ async function route(ctx, store, desk, req, res) {
       const proposals = proposeRules(await store.read())
       if (!proposals.length) return json(res, 200, { added: 0, state: await store.read() })
       const state = await store.mutate(tr('Learn from data'), (draft) => {
-        // 只用示例数据算出来的建议也算示例，清空示例时一起清掉，也不会被导出
+        // Rules learned from sample data are samples too: cleared with the rest and never exported
         const fromSamples = !draft.metrics.some(metric => !metric.sample)
         const { receipts } = applyOps(draft, proposals.map(row => ({ op: 'add_skill', ...row, status: 'proposed' })))
         if (fromSamples) for (const receipt of receipts) { const skill = draft.skills.find(row => row.id === receipt?.target); if (skill) skill.sample = true }
@@ -410,7 +407,7 @@ async function route(ctx, store, desk, req, res) {
     case 'skills/export': {
       const state = await store.read()
       const result = await exportSkill(state, dshHome())
-      const next = await store.mutate('导出 Skill', (draft) => {
+      const next = await store.mutate('Export Skill', (draft) => {
         applyOps(draft, draft.skills.filter(s => !s.sample && s.status === 'active').map(s => ({ op: 'update_skill', id: s.id, status: 'exported' })))
         return draft
       }, { undoable: false })
@@ -421,11 +418,11 @@ async function route(ctx, store, desk, req, res) {
 }
 
 /**
- * Web 服务不会替插件路由鉴权，所以每个请求都要自己走一遍 Host/Origin 和登录凭证检查。
- * 拿不到鉴权服务时一律拒绝。
- * @param {object} ctx - Cordis 上下文。
- * @param {{headers: object}} req - HTTP 请求。
- * @returns {number|undefined} 拒绝时的状态码；可以继续时为 undefined。
+ * The web server doesn't authenticate plugin routes, so every request has to run
+ * the Host/Origin and login checks itself. Refuse when the auth service is missing.
+ * @param {object} ctx - Cordis context.
+ * @param {{headers: object}} req - HTTP request.
+ * @returns {number|undefined} Status code when refusing; undefined to continue.
  */
 export function requestRejection(ctx, req) {
   const connection = ctx.get('connection')
@@ -453,7 +450,7 @@ export default {
             json(res, rejection, { error: tr('Not authorized') })
             return
           }
-          await withLang(req.headers['x-media-desk-lang'], () => route(ctx, store, desk, req, res))
+          await route(ctx, store, desk, req, res)
         } catch (err) {
           if (res.headersSent) {
             res.end()

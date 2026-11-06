@@ -1,7 +1,7 @@
-// 浏览器侧的状态：Host 状态的本地镜像，加上只属于界面的选中、视图等。
+// Browser-side state: a local mirror of the Host state, plus selection, view and other UI-only state.
 import React from 'react'
 import { coverDataUrl } from './cover.js'
-import { lang, plural, t } from './i18n.js'
+import { plural, t } from './i18n.js'
 
 const BASE = 'media-desk/'
 
@@ -31,8 +31,8 @@ export function useDesk(selector) {
 }
 
 async function request(path, body) {
-  const res = await fetch(BASE + path, body === undefined ? { headers: { 'x-media-desk-lang': lang() } } : {
-    method: 'POST', headers: { 'content-type': 'application/json', 'x-media-desk-lang': lang() }, body: JSON.stringify(body),
+  const res = await fetch(BASE + path, body === undefined ? {} : {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || t('Request failed ({status})', { status: res.status }))
@@ -91,7 +91,7 @@ export function closeItem() {
   setDesk({ focusId: null, sheetOrigin: null, studioDock: false, chatQuote: null })
 }
 
-/** 一键成稿。任务在 Host 里跑，这里只负责启动和看进度。 */
+/** One-click draft. The job runs on the Host; this just starts it and follows progress. */
 export async function runProduce(id) {
   try {
     const data = await request('produce', { id })
@@ -122,7 +122,7 @@ function mergeProduction(id, production, status) {
   setDesk(s => ({ state: { ...s.state, items: s.state.items.map(item => (item.id === id ? { ...item, production, ...(status ? { status } : {}) } : item)) } }))
 }
 
-/** 轮询进度，返回停止函数。 */
+/** Poll progress; returns a stop function. */
 export function watchProduction(id) {
   let stopped = false
   const tick = async () => {
@@ -133,7 +133,7 @@ export function watchProduction(id) {
         setDesk(s => ({ live: { ...s.live, [id]: data.live } }))
         if (data.production) mergeProduction(id, data.production, data.status)
       } catch {
-        // 连接抖动时下一轮再试
+        // Connection hiccup: try again next tick
       }
       await new Promise(r => setTimeout(r, 700))
     }
@@ -179,7 +179,7 @@ function runActions(actions) {
 
 export async function sendChat(text) {
   const { chatQuote: quote, focusId } = snapshot
-  // 选中的段落或某一镜，随消息一起交给模型
+  // The selected passage or shot travels with the message
   const message = quote ? (quote.text ? t('About {label} “{quote}”: {text}', { label: quote.label, quote: quote.text, text }) : t('About {label}: {text}', { label: quote.label, text })) : text
   setDesk(s => ({
     thinking: true,
@@ -201,7 +201,7 @@ export async function sendChat(text) {
 export async function saveProduced(id) {
   try {
     const production = snapshot.state.items.find(row => row.id === id)?.production
-    // 视频封面在浏览器里合成，一起存进文件夹
+    // The video cover is composited in the browser and saved with the folder
     const videoCover = await coverDataUrl({ src: production.cover?.src, text: production.coverText || production.title }).catch(() => undefined)
     const data = await request('produce/save', { id, videoCover })
     setDesk({ state: data.state })
@@ -241,7 +241,7 @@ export async function captureUrl(url, extra = {}) {
 }
 
 export async function uploadFile(file) {
-  const res = await fetch(`${BASE}upload`, { method: 'POST', headers: { 'content-type': file.type, 'x-media-desk-lang': lang() }, body: file })
+  const res = await fetch(`${BASE}upload`, { method: 'POST', headers: { 'content-type': file.type }, body: file })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || t('Upload failed'))
   return data

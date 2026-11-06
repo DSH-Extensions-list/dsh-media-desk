@@ -1,4 +1,4 @@
-// 侧边对话：一句话改一切。解析和执行都在 Host，这里只负责展示回执。
+// Side chat: one sentence changes everything. Parsing and execution happen on the Host; this only shows receipts.
 import React from 'react'
 import { clearChat, openItem, sendChat, setDesk, undo, useDesk } from './desk.js'
 import { t } from './i18n.js'
@@ -38,7 +38,7 @@ function Message({ message, canUndoThis }) {
   )
 }
 
-/** 对话面板：首页的助手和成稿工作区共用。每条灵感有自己的对话。 */
+/** Chat panel shared by the home assistant and the studio. Each idea has its own chat. */
 export function ChatPanel({ itemId, head, top = null, suggestions, placeholder, disabled = false, intro = true }) {
   const all = useDesk(s => s.state.chat)
   const chat = React.useMemo(() => all.filter(m => (m.itemId ?? null) === (itemId ?? null)), [all, itemId])
@@ -91,7 +91,7 @@ export function ChatPanel({ itemId, head, top = null, suggestions, placeholder, 
         {quote ? (
           <div className="md-composer-ctx">
             <Icon name="target" size={12} />
-            <span>{quote.text ? t('{label}：{text}', { label: quote.label, text: quote.text }) : quote.label}</span>
+            <span>{quote.text ? t('{label}: {text}', { label: quote.label, text: quote.text }) : quote.label}</span>
             <button type="button" aria-label={t('Remove quote')} onClick={() => setDesk({ chatQuote: null })}><Icon name="close" size={11} /></button>
           </div>
         ) : null}

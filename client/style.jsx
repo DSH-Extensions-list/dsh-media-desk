@@ -1,8 +1,8 @@
-// 风格：按博主类型分板块的预设，加上从自己账号提炼的专属风格。选哪张，就按哪张写。
+// Style: presets grouped by creator type, plus your own style learned from your account. Whichever you pick is how drafts are written.
 import React from 'react'
 import { dispatchOps, exportSkills, extractStyle, learnSkills, setDesk, useDesk } from './desk.js'
 import { ConnectDialog } from './connect.jsx'
-import { lang, t, useLang } from './i18n.js'
+import { t } from './i18n.js'
 import { Dialog, Icon, IconButton } from './ui.jsx'
 import { STYLE_CATEGORIES, hash, styleIcon } from './util.js'
 
@@ -35,7 +35,7 @@ function AddStyleDialog({ initialTab, onClose, onConnect }) {
           <label className="md-field">
             <span>{t('Link')}</span>
             <textarea rows={4} required value={urls} onChange={e => setUrls(e.target.value)} placeholder={t('Links to posts you published\nOne per line, up to 5')} />
-            <small>{t('Only public pages can be read. Social platforms like TikTok, Instagram and X require sign-in, so ')}<button type="button" className="md-inline-link" onClick={onConnect}>{t('import your account instead')}</button>{t('。')}</small>
+            <small>{t('Only public pages can be read. Social platforms like TikTok, Instagram and X require sign-in, so ')}<button type="button" className="md-inline-link" onClick={onConnect}>{t('import your account instead')}</button>.</small>
           </label>
         )}
         <label className="md-field">
@@ -53,7 +53,7 @@ function AddStyleDialog({ initialTab, onClose, onConnect }) {
 }
 
 function editStyle(style) {
-  const sep = lang() === 'en' ? ', ' : '、'
+  const sep = ', '
   setDesk({
     dialog: {
       title: t('Edit style'),
@@ -70,7 +70,7 @@ function editStyle(style) {
         { name: 'avoid', label: t('Avoid'), hint: t('Separate with commas') },
       ],
       onSubmit: (values) => {
-        const list = value => String(value ?? '').split(/[、,，]/).map(v => v.trim()).filter(Boolean)
+        const list = value => String(value ?? '').split(',').map(v => v.trim()).filter(Boolean)
         dispatchOps([{ op: 'update_style', id: style.id, name: values.name, icon: values.icon ?? '', summary: values.summary ?? '', tone: values.tone ?? '', sentences: values.sentences ?? '', opening: values.opening ?? '', structure: values.structure ?? '', words: list(values.words), avoid: list(values.avoid) }], { label: t('Edit style') })
       },
       onDelete: style.preset ? undefined : () => dispatchOps([{ op: 'delete_style', id: style.id }], { label: t('Delete style “{name}”', { name: style.name }) }),
@@ -100,7 +100,6 @@ function StyleCard({ style, active }) {
 }
 
 export function StyleView() {
-  useLang()
   const styles = useDesk(s => s.state.styles ?? [])
   const activeId = useDesk(s => s.state.activeStyleId)
   const skills = useDesk(s => s.state.skills)

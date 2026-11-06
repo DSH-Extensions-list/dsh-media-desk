@@ -15,18 +15,3 @@ export function t(text, vars) {
 export function plural(n, one, other) {
   return n === 1 ? one : other
 }
-
-/** The plugin has a single interface language. */
-export function lang() {
-  return 'en'
-}
-
-/** Kept so components can subscribe to a language that never changes. */
-export function subscribeLang() {
-  return () => {}
-}
-
-/** Kept for components that re-read the interface language. */
-export function useLang() {
-  return 'en'
-}

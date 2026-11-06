@@ -1,4 +1,4 @@
-// dsh-media-desk 浏览器半片：侧栏入口 + main 全局面板。
+// The browser half of dsh-media-desk: the sidebar entry and the full main panel.
 import React from 'react'
 import { HomeView } from './canvas.jsx'
 import { ChatDock } from './chat.jsx'
@@ -10,12 +10,12 @@ import { ScheduleView } from './schedule.jsx'
 import { SettingsDialog } from './settings.jsx'
 import { Studio } from './studio.jsx'
 import css from './styles.css'
-import { lang, subscribeLang, t, useLang } from './i18n.js'
+import { t } from './i18n.js'
 import { Dialog, FormDialog, Icon, IconButton, Toast } from './ui.jsx'
 
 const PANEL_ID = 'media-desk'
 
-// navKey：同一个中文在别处意思不同（单数的“灵感”“风格”），英文导航另查一条
+// navKey: the plural form used in the nav, where a section reads differently than elsewhere
 const NAV = [
   { id: 'home', label: 'Idea', navKey: 'Ideas' },
   { id: 'content', label: 'Content' },
@@ -50,7 +50,7 @@ function CaptureDialog() {
     } else if (tab === 'quote' || tab === 'text') {
       const value = text.trim()
       if (value) {
-        await dispatchOps([{ op: 'add_item', kind: tab === 'quote' ? 'quote' : 'note', title: tab === 'quote' ? value : value.split(/[。！？\n]|[.!?](?=\s|$)/)[0].slice(0, 40), body: tab === 'quote' ? '' : value }], { label: t('Add idea') })
+        await dispatchOps([{ op: 'add_item', kind: tab === 'quote' ? 'quote' : 'note', title: tab === 'quote' ? value : value.split(/[.!?](?=\s|$)|\n/)[0].slice(0, 40), body: tab === 'quote' ? '' : value }], { label: t('Add idea') })
         close()
       }
     }
@@ -110,8 +110,7 @@ function SampleBadge() {
 }
 
 function Desk() {
-  // 切换语言时整棵树重新渲染
-  useLang()
+  // Keeps the tree subscribed to the interface language
   const ready = useDesk(s => Boolean(s.state))
   const error = useDesk(s => s.error)
   const view = useDesk(s => s.view)
@@ -122,7 +121,7 @@ function Desk() {
   const narrow = width < 1020
 
   React.useEffect(() => { loadDesk() }, [])
-  // 窗口窄的时候对话栏会盖住内容，默认收起，需要时再打开
+  // On narrow windows the chat dock covers content, so start it collapsed
   React.useEffect(() => {
     if (narrow) setDesk({ dockOpen: false })
   }, [narrow])
@@ -145,7 +144,7 @@ function Desk() {
     return () => window.removeEventListener('keydown', onKey)
   }, [canUndo])
 
-  // 工作区有自己的对话栏
+  // The studio has its own chat panel
   const focused = useDesk(s => Boolean(s.focusId))
   const showDock = dockOpen && !focused
   const Active = VIEWS[view] ?? HomeView
@@ -157,7 +156,7 @@ function Desk() {
         <header className="md-topbar" data-window-drag="">
           <nav className="md-nav" aria-label={t('Desk navigation')}>
             {NAV.map(entry => (
-              <button type="button" key={entry.id} className={view === entry.id ? 'is-on' : ''} aria-current={view === entry.id ? 'page' : undefined} onClick={() => setDesk({ view: entry.id, focusId: null })}>{entry.navKey && lang() === 'en' ? t(entry.navKey) : t(entry.label)}</button>
+              <button type="button" key={entry.id} className={view === entry.id ? 'is-on' : ''} aria-current={view === entry.id ? 'page' : undefined} onClick={() => setDesk({ view: entry.id, focusId: null })}>{entry.navKey ? t(entry.navKey) : t(entry.label)}</button>
             ))}
           </nav>
           <span style={{ flex: 1 }} />
@@ -190,7 +189,7 @@ export const inject = ['slots']
 
 export function apply(ctx) {
   ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key: PANEL_ID }, Desk))
-  // 侧栏的名字只在注册时读一次，换语言时重新注册
+  // The sidebar label is read once at registration, so re-register on a language change
   ctx.effect(() => {
     let release = null
     const mount = () => {
@@ -203,7 +202,6 @@ export function apply(ctx) {
       }, PanelIcon))
     }
     mount()
-    const off = subscribeLang(mount)
-    return () => { off(); release?.() }
+    return () => { release?.() }
   }, 'dsh-media-desk: sidebar entry')
 }

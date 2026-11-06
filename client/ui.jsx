@@ -1,4 +1,4 @@
-// 通用小组件：图标、按钮、对话框、提示。
+// Shared widgets: icons, buttons, dialogs, toasts.
 import React from 'react'
 import { setDesk, undo, useDesk } from './desk.js'
 import { t } from './i18n.js'
@@ -77,7 +77,7 @@ export function Segmented({ value, options, onChange, label }) {
 
 export function Dialog({ title, onClose, children, width = 440 }) {
   const ref = React.useRef(null)
-  // onClose 每次渲染都可能是新函数；放进 ref，免得每打一个字焦点就被抢走
+  // onClose can be a new function on every render; keep it in a ref so typing doesn't steal focus
   const close = React.useRef(onClose)
   close.current = onClose
   React.useEffect(() => {
@@ -105,7 +105,7 @@ export function Dialog({ title, onClose, children, width = 440 }) {
   )
 }
 
-/** 字段驱动的通用编辑框，风格、规则和数据都用它。 */
+/** Field-driven edit dialog used by styles, rules and stats. */
 export function FormDialog() {
   const dialog = useDesk(s => s.dialog)
   const [values, setValues] = React.useState({})

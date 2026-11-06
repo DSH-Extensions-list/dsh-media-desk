@@ -1,14 +1,14 @@
-import { lang, t } from './i18n.js'
+import { t } from './i18n.js'
 
-// 这些表只放中文原文，显示时再用 t() 翻译
+// Display names. Call sites wrap them in t() so the wording lives in one place.
 export const STATUSES = ['idea', 'outline', 'draft', 'ready', 'published']
 export const STATUS_LABEL = { idea: 'Idea', outline: 'Outline', draft: 'Draft', ready: 'Ready', published: 'Published' }
 export const KIND_LABEL = { image: 'Image', video: 'Video', web: 'Web', quote: 'Quote', note: 'Note' }
 export const PLATFORMS = ['WeChat', 'RedNote', 'Douyin', 'Bilibili', 'WeChat Channels', 'TikTok', 'Instagram', 'YouTube', 'X']
 const OVERSEAS = new Set(['TikTok', 'Instagram', 'YouTube', 'X'])
-/** 下拉框里的平台顺序：英文界面把海外平台放前面。 */
+/** Platform dropdown order: overseas platforms first. */
 export function platformChoices() {
-  return lang() === 'en' ? [...PLATFORMS.filter(p => OVERSEAS.has(p)), ...PLATFORMS.filter(p => !OVERSEAS.has(p))] : PLATFORMS
+  return [...PLATFORMS.filter(p => OVERSEAS.has(p)), ...PLATFORMS.filter(p => !OVERSEAS.has(p))]
 }
 export const STYLE_CATEGORIES = ['Tech', 'Travel & food', 'Lifestyle', 'Opinion', 'Tutorials', 'Reviews', 'Stories', 'News']
 
@@ -16,8 +16,8 @@ export function styleIcon(style) {
   return style?.icon || '✍️'
 }
 export const PLATFORM_URL = {
-  公众号: 'https://mp.weixin.qq.com/', 小红书: 'https://creator.xiaohongshu.com/publish/publish', 抖音: 'https://creator.douyin.com/creator-micro/content/upload',
-  B站: 'https://member.bilibili.com/platform/upload/video/frame', 视频号: 'https://channels.weixin.qq.com/platform/post/create', TikTok: 'https://www.tiktok.com/tiktokstudio/upload', Instagram: 'https://www.instagram.com/', YouTube: 'https://studio.youtube.com/', X: 'https://x.com/compose/post',
+  WeChat: 'https://mp.weixin.qq.com/', RedNote: 'https://creator.xiaohongshu.com/publish/publish', Douyin: 'https://creator.douyin.com/creator-micro/content/upload',
+  Bilibili: 'https://member.bilibili.com/platform/upload/video/frame', 'WeChat Channels': 'https://channels.weixin.qq.com/platform/post/create', TikTok: 'https://www.tiktok.com/tiktokstudio/upload', Instagram: 'https://www.instagram.com/', YouTube: 'https://studio.youtube.com/', X: 'https://x.com/compose/post',
 }
 
 export function hash(text) {
@@ -41,7 +41,7 @@ export function seeded(seed) {
 
 export const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-/** 把弹簧响应采样成 CSS linear() 缓动，WAAPI 和 CSS 都能用。 */
+/** Sample a spring response into a CSS linear() easing usable by WAAPI and CSS. */
 export function springEasing(stiffness = 170, damping = 20, mass = 1) {
   const w0 = Math.sqrt(stiffness / mass)
   const zeta = damping / (2 * Math.sqrt(stiffness * mass))
@@ -77,8 +77,7 @@ const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'S
 
 export function fmtDate(iso) {
   const d = new Date(iso)
-  if (lang() === 'en') return `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}`
-  return `${d.getMonth() + 1}月${d.getDate()}日`
+  return `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}`
 }
 
 export function fmtWhen(iso) {
@@ -104,28 +103,24 @@ export function toLocalInput(iso) {
 
 export function compact(n) {
   if (n === null || n === undefined) return '—'
-  if (lang() === 'en') {
-    // 英文用 K / M，去掉多余的 .0
-    const short = (value, suffix) => `${value.toFixed(value >= 100 ? 0 : 1).replace(/\.0$/, '')}${suffix}`
-    if (n >= 999500) return short(n / 1000000, 'M')
-    if (n >= 10000) return short(n / 1000, 'K')
-    return n.toLocaleString('en-US')
-  }
-  if (n >= 10000) return `${(n / 10000).toFixed(n >= 100000 ? 0 : 1)}万`
-  return n.toLocaleString()
+  // K / M, without a trailing .0
+  const short = (value, suffix) => `${value.toFixed(value >= 100 ? 0 : 1).replace(/\.0$/, '')}${suffix}`
+  if (n >= 999500) return short(n / 1000000, 'M')
+  if (n >= 10000) return short(n / 1000, 'K')
+  return n.toLocaleString('en-US')
 }
 
 /** The unit that follows a count. */
-export function unit(n, zh) {
-  return t(zh)
+export function unit(n, word) {
+  return t(word)
 }
 
-/** 连续记录天数：今天还没记时，从昨天往回算，不会让今天一早就断掉。 */
-/** 灵感墙和邮票只放自己记下的灵感，从账号导入的已发内容不算。 */
+/** The wall and stamps only show ideas you noted yourself; imported posts don't count. */
 export function isIdea(item) {
   return !item.parentId && !item.imported
 }
 
+/** Streak of days recorded: when today is empty, count back from yesterday so the morning doesn't break it. */
 export function computeStreak(items, now = new Date()) {
   const days = new Set(items.filter(isIdea).map(i => dayKey(i.createdAt)))
   const cursor = new Date(now)
@@ -138,7 +133,7 @@ export function computeStreak(items, now = new Date()) {
   return streak
 }
 
-/** 成稿之后，卡片显示封面和最终标题。 */
+/** Once a draft exists, the card shows its cover and final title. */
 export function displayItem(item) {
   const production = item.production
   if (!production?.title || production.status === 'running') return item
@@ -162,7 +157,7 @@ function inline(text) {
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
 }
 
-/** 草稿预览用的极简 Markdown：先转义，再处理结构，模型输出里的 HTML 不会被执行。 */
+/** Minimal Markdown for draft previews: escape first, then structure, so HTML in model output never runs. */
 export function renderMarkdown(source) {
   const lines = source.split('\n')
   const out = []
@@ -202,8 +197,7 @@ export function renderMarkdown(source) {
   return out.join('')
 }
 
-/** 正文长度：中文按字数（不算空白），英文按词数，中文字在英文里各算一个。 */
+/** Body length in words. */
 export function textLength(text) {
-  if (lang() !== 'en') return text.replace(/\s/g, '').length
-  return (text.match(/[\u4e00-\u9fff]|[A-Za-z0-9][A-Za-z0-9'’-]*/g) || []).length
+  return (text.match(/[A-Za-z0-9][A-Za-z0-9'’-]*/g) || []).length
 }

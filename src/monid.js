@@ -1,12 +1,13 @@
-// 抓账号：通过用户自己装好的 Monid 命令行读取公开内容和互动数据。
-// 密钥由 Monid 自己保管，这里只调用命令，不读也不存。每次调用都花用户的余额，所以端点和条数都是写死的。
+// Account import: read public content and engagement numbers through the Monid CLI the user installed.
+// Monid keeps the key itself; this code only invokes the command and never reads or stores the key.
+// Every call spends the user's balance, so the endpoints and counts below are hard-coded.
 import { execFile } from 'node:child_process'
 import { access, constants, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { assertPublicUrl } from './harvest.js'
 import { newId } from './ops.js'
-import { platformName, tr } from './i18n.js'
+import { tr } from './i18n.js'
 
 const POST_COUNT = 20
 const RUN_WAIT_SECONDS = 120
@@ -17,22 +18,23 @@ const SHORT_HOSTS = ['xhslink.com', 'v.douyin.com', 'b23.tv', 'vm.tiktok.com', '
 
 export const MONID_SKILL_URL = 'https://monid.ai/SKILL.md'
 
+// Keyed by the stored platform value, which is the English platform name.
 const SOURCES = {
-  小红书: {
+  RedNote: {
     query: id => ({ user_id: id }),
     calls: {
       posts: '/api/v1/xiaohongshu/app_v2/get_user_posted_notes',
       profile: '/api/v1/xiaohongshu/app_v2/get_user_info',
     },
   },
-  抖音: {
+  Douyin: {
     query: (id, kind) => (kind === 'posts' ? { sec_user_id: id, count: POST_COUNT } : { sec_user_id: id }),
     calls: {
       posts: '/api/v1/douyin/app/v3/fetch_user_post_videos',
       profile: '/api/v1/douyin/app/v3/handler_user_profile',
     },
   },
-  B站: {
+  Bilibili: {
     query: (id, kind) => (kind === 'posts' ? { uid: id, ps: POST_COUNT } : { uid: id }),
     calls: {
       posts: '/api/v1/bilibili/web/fetch_user_post_videos',
@@ -47,7 +49,7 @@ const SOURCES = {
       profile: '/api/v1/tiktok/app/v3/handler_user_profile',
     },
   },
-  // Instagram 要先用用户名查到数字 ID，才能读帖子
+  // Instagram needs a numeric user id first, which is looked up from the username, before posts can be read
   Instagram: {
     profileFirst: true,
     query: (id, kind, profile) => (kind === 'posts' ? { user_id: profile?.data?.user?.id, count: Math.min(POST_COUNT, 50) } : { username: id }),
@@ -56,7 +58,7 @@ const SOURCES = {
       posts: '/api/v1/instagram/v1/fetch_user_posts',
     },
   },
-  // X 的帖子接口顺带返回账号资料，一次就够
+  // X's post endpoint returns the account profile too, so one call is enough
   X: {
     query: id => ({ screen_name: id }),
     calls: {
@@ -65,7 +67,7 @@ const SOURCES = {
   },
 }
 
-// 主页链接里这些路径不是账号名
+// These paths on a profile URL are not account names
 const RESERVED = {
   Instagram: new Set(['p', 'reel', 'reels', 'explore', 'stories', 'accounts', 'direct', 'tv']),
   X: new Set(['i', 'home', 'search', 'explore', 'intent', 'share', 'settings', 'messages', 'notifications', 'hashtag', 'compose']),
@@ -75,16 +77,17 @@ function hostIs(host, name) {
   return host === name || host.endsWith(`.${name}`)
 }
 
-/** 从分享文案里找到第一个链接。App 分享出来的文字常常混着标题和口令。 */
+/** Find the first link in shared text. Text shared out of an app often mixes in a title and a share code. */
 export function findUrl(text) {
-  const match = /https?:\/\/[^\s，。！？、；：「」《》（）()"'<>]+/i.exec(String(text ?? ''))
+  const match = /https?:\/\/[^\s"'<>()[\]{}]+/i.exec(String(text ?? ''))
   return match?.[0] ?? null
 }
 
 /**
- * 从主页链接里取出平台和账号 ID。ID 会被传给命令行，所以只接受固定格式。
- * @param {string} raw - 链接。
- * @returns {{platform: string, id: string, url: string}|null} 认不出时返回 null。
+ * Read the platform and account id out of a profile link. The id is passed to the command line,
+ * so only fixed formats are accepted.
+ * @param {string} raw - The link.
+ * @returns {{platform: string, id: string, url: string}|null} null when it isn't recognized.
  */
 export function parseAccountUrl(raw) {
   let url
@@ -122,7 +125,8 @@ export function parseAccountUrl(raw) {
   return null
 }
 
-/** 粘贴的内容可能是短链，跟着跳转找到主页。只跟这几个平台的短链，每一跳都检查不是内网。 */
+/** Pasted text may hold a short link, so follow the redirects to the profile. Only follow short links
+ * for these platforms, and check every hop is not a private-network address. */
 export async function resolveAccount(text, fetchImpl = fetch) {
   const first = findUrl(text)
   if (!first) throw Object.assign(new Error(tr('No link found. Paste the URL of the account\'s profile page.')), { status: 400 })
@@ -173,7 +177,7 @@ function assertOk(platform, output) {
   if (failed) throw new Error(text(output?.status_msg ?? output?.msg ?? output?.message, 120) || tr('The platform returned nothing'))
 }
 
-/** 第三方接口的返回不可信：只取用得到的字段，并限制长度。 */
+/** Third-party responses are untrusted: keep only the fields we use and cap their length. */
 export function normalizePosts(platform, output) {
   assertOk(platform, output)
   if (platform === 'RedNote') {
@@ -265,7 +269,8 @@ export function normalizeProfile(platform, { profile, relation }) {
   return { nickname: text(data.name, 40), description: text(data.sign, 300), followers: count(relation?.follower ?? relation?.data?.follower) }
 }
 
-/** 找到 monid 命令。桌面版从访达启动时 PATH 很短，所以要多找几个常见位置，再问一次登录 shell。 */
+/** Locate the monid command. An app started from Finder gets a short PATH, so check the usual
+ * install locations and then ask a login shell once. */
 function createLocator(exec) {
   let cached = null
   const shell = process.env.SHELL || '/bin/zsh'
@@ -282,21 +287,21 @@ function createLocator(exec) {
         await access(join(dir, 'monid'), constants.X_OK)
         bin = join(dir, 'monid')
         break
-      } catch { /* 下一个位置 */ }
+      } catch { /* try the next location */ }
     }
     if (!bin) {
       const found = await ask('command -v monid')
       if (found.startsWith('/')) bin = found
     }
     if (!bin) return null
-    // 命令行靠 node 运行，子进程要能找到它
+    // The CLI runs on node, so the child process has to find it
     const login = await ask('printf %s "$PATH"')
     cached = { bin, path: [dirname(bin), login, process.env.PATH, '/opt/homebrew/bin', '/usr/local/bin'].filter(Boolean).join(delimiter) }
     return cached
   }
 }
 
-/** 从命令输出里解析 JSON。升级提示之类的内容可能混在前后。 */
+/** Parse JSON out of the command output. Upgrade notices and similar text may wrap it. */
 function parseOutput(stdout) {
   const raw = String(stdout ?? '')
   const start = raw.indexOf('{')
@@ -310,16 +315,16 @@ function parseOutput(stdout) {
 }
 
 /**
- * @param {typeof execFile} [exec] - 测试时替换。
- * @param {Function} [locate] - 测试时替换。
- * @returns {(args: string[]) => Promise<object|null>} 执行 monid 并返回 JSON；命令不存在时返回 null。
+ * @param {typeof execFile} [exec] - Replaced in tests.
+ * @param {Function} [locate] - Replaced in tests.
+ * @returns {(args: string[]) => Promise<object|null>} Runs monid and returns JSON; null when the command isn't installed.
  */
 export function createMonidRunner(exec = execFile, locate = createLocator(exec)) {
   return async (args, timeoutSeconds = 30) => {
     const found = await locate()
     if (!found) return null
     return new Promise((resolve, reject) => {
-      // 不经过 shell，参数原样传给命令
+      // No shell in between; arguments go to the command verbatim
       exec(found.bin, args, { timeout: timeoutSeconds * 1000, maxBuffer: MAX_OUTPUT, env: { ...process.env, PATH: found.path, NO_COLOR: '1' } }, (err, stdout, stderr) => {
         const parsed = parseOutput(stdout)
         if (parsed) return resolve(parsed)
@@ -330,7 +335,7 @@ export function createMonidRunner(exec = execFile, locate = createLocator(exec))
   }
 }
 
-/** 连接状态。密钥和账号信息都不返回，只告诉界面下一步该做什么。 */
+/** Connection state. Neither the key nor account details come back; the UI only learns what to do next. */
 export async function monidStatus(run) {
   try {
     const data = await run(['balance', '-j'])
@@ -348,7 +353,7 @@ async function runEndpoint(run, endpoint, query) {
   if (data === null) throw Object.assign(new Error(tr('Monid isn\'t installed yet')), { status: 400 })
   if (data.error) {
     const authFailed = data.error.code === 'AUTH_FAILED'
-    throw Object.assign(new Error(authFailed ? tr('Monid doesn\'t have an API key yet') : tr('Monid：{message}', { message: text(data.error.message, 160) })), { status: authFailed ? 400 : 502 })
+    throw Object.assign(new Error(authFailed ? tr('Monid doesn\'t have an API key yet') : tr('Monid: {message}', { message: text(data.error.message, 160) })), { status: authFailed ? 400 : 502 })
   }
   if (data.status === 'BLOCKED') throw Object.assign(new Error(tr('Monid\'s budget limit blocked this import. Adjust it at app.monid.ai and try again.')), { status: 402 })
   if (data.status !== 'COMPLETED') throw Object.assign(new Error(tr('Monid didn\'t finish this run ({status})', { status: text(data.status, 20) || tr('unknown status') })), { status: 502 })
@@ -356,8 +361,8 @@ async function runEndpoint(run, endpoint, query) {
 }
 
 /**
- * 只读一页内容和账号资料，不翻页，花费封顶。
- * @returns {Promise<{posts: object[], profile: object, cost: number}>} 内容、资料和实际花费（美元）。
+ * Read one page of posts plus the account profile. No paging, and the spend is capped.
+ * @returns {Promise<{posts: object[], profile: object, cost: number}>} Posts, profile and the actual cost in USD.
  */
 export async function fetchAccount(account, run) {
   const source = SOURCES[account.platform]
@@ -380,7 +385,7 @@ export async function fetchAccount(account, run) {
       const result = await runEndpoint(run, source.calls[kind], source.query(account.id, kind))
       extras[kind] = result.output
       cost += result.cost
-    } catch { /* 资料读不到也不影响内容 */ }
+    } catch { /* a missing profile doesn't block the posts */ }
   }
   return { posts: list, profile: normalizeProfile(account.platform, extras), cost }
 }
@@ -393,7 +398,7 @@ function sniffImage(buffer) {
   return null
 }
 
-/** 平台图片的地址会过期，封面要存到本地。失败时返回 null，内容照常导入。 */
+/** Platform image URLs expire, so covers are saved locally. On failure this returns null and the import continues. */
 async function saveCover(raw, filesDir, fetchImpl) {
   try {
     let current = raw
@@ -413,11 +418,11 @@ async function saveCover(raw, filesDir, fetchImpl) {
       await writeFile(join(filesDir, name), buffer)
       return `media-desk/files/${name}`
     }
-  } catch { /* 封面不是必需的 */ }
+  } catch { /* the cover is optional */ }
   return null
 }
 
-/** 给还没有封面的内容下载封面，返回 外部ID → 本地地址。 */
+/** Download covers for posts that don't have one yet, returning external id -> local path. */
 export async function saveCovers(posts, platform, state, filesDir, fetchImpl = fetch) {
   const known = new Set(state.items.filter(item => item.media?.src && item.externalId).map(item => item.externalId))
   const queue = posts.filter(post => post.cover && !known.has(`${platform}:${post.id}`))
@@ -432,10 +437,11 @@ export async function saveCovers(posts, platform, state, filesDir, fetchImpl = f
   return saved
 }
 
-/** 把自己账号的内容写进内容库和复盘。再抓一次只更新数字，不会重复，也不改用户动过的文字。 */
+/** Write your own account's posts into the content library and analytics. A second import only
+ * updates the numbers: no duplicates, and no rewriting text the user has edited. */
 export function importPosts(draft, { account, profile, posts, covers = new Map(), now = new Date().toISOString() }) {
   const { platform } = account
-  const nickname = profile.nickname || platformName(platform)
+  const nickname = profile.nickname || platform
   let added = 0
   for (const post of posts) {
     const externalId = `${platform}:${post.id}`
@@ -462,7 +468,7 @@ export function importPosts(draft, { account, profile, posts, covers = new Map()
   return { added, updated: posts.length - added }
 }
 
-/** 给风格提炼用的素材。互动最高的放前面，模型会更看重开头的内容。 */
+/** Material for style extraction. The most engaging posts come first, because the model weighs the opening more. */
 export function postsToMaterial(posts) {
   const score = post => post.likes + post.comments + post.saves + post.shares
   return [...posts]

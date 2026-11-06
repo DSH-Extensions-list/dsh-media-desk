@@ -1,4 +1,4 @@
-/* 所有颜色走 DSH 语义 token，明暗主题由宿主负责。圆角遵循 DSH 统一圆角规范。 */
+/* Every color comes from DSH semantic tokens; the host owns light and dark. Radii follow the DSH radius spec. */
 .md-root {
   --ink: var(--dsw-alias-label-primary);
   --ink2: var(--dsw-alias-label-secondary);
@@ -49,7 +49,7 @@
 .md-muted { color: var(--ink3); }
 .md-nowrap { white-space: nowrap; }
 
-/* 背景氛围：很淡的彩色光斑，缓慢漂移 */
+/* Ambient background: faint colored blobs, drifting slowly */
 .md-ambient { position: absolute; inset: 0; overflow: clip; pointer-events: none; }
 .md-ambient i { position: absolute; width: 56vmax; height: 56vmax; border-radius: 50%; corner-shape: round; filter: blur(70px); opacity: .5; animation: md-drift 42s ease-in-out infinite alternate; }
 .md-ambient i:nth-child(1) { left: -18vmax; top: -24vmax; background: radial-gradient(circle, color-mix(in srgb, #d9e4ff 42%, var(--bg)), transparent 68%); }
@@ -80,7 +80,7 @@
 .md-shimmer { background: linear-gradient(100deg, var(--ink3) 30%, var(--ink) 50%, var(--ink3) 70%); background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: md-shimmer 1.6s linear infinite; }
 @keyframes md-shimmer { to { background-position: -220% 0; } }
 
-/* 按钮与基础控件 */
+/* Buttons and basic controls */
 .md-icon-btn { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 32px; height: 32px; border-radius: var(--r-md); color: var(--ink2); transition: background .15s, color .15s; }
 .md-icon-btn:hover { background: var(--hover); color: var(--ink); }
 .md-icon-btn.is-active { background: var(--active); color: var(--ink); }
@@ -109,7 +109,7 @@
 .md-topbar .md-seg { background: var(--glass); backdrop-filter: blur(24px) saturate(160%); box-shadow: var(--dsw-elevation-soft); }
 .md-seg button.is-on { background: var(--card); color: var(--ink); box-shadow: var(--dsw-elevation-soft); }
 
-/* 画布 */
+/* Canvas */
 .md-home { position: absolute; inset: 0; }
 .md-stage {
   position: absolute; inset: 0; overflow: clip; touch-action: none; cursor: grab; user-select: none;
@@ -183,7 +183,7 @@
 .md-status.status-ready { background: color-mix(in srgb, #8a5fe0 14%, transparent); }
 .md-status.status-published { background: color-mix(in srgb, #2fa36c 16%, transparent); }
 
-/* 首屏那句话 */
+/* The hero line */
 .md-hero-anchor { position: absolute; left: 0; top: 0; width: 520px; transform: translate(-50%, -50%); }
 .md-hero { cursor: default; user-select: text; }
 .md-hero-date { color: var(--ink3); font-size: 13px; line-height: 20px; margin-bottom: 12px; }
@@ -214,14 +214,14 @@
 .md-stage.is-focusing ~ .md-dockbar { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(12px); }
 .md-root:has(.md-sheet) .md-dockbar { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(12px); }
 
-/* 迷你邮票条 */
+/* Mini stamp strip */
 .md-ministamps { display: flex; align-items: center; gap: 8px; margin-top: 18px; }
 .md-ministamps-row { display: grid; grid-template-columns: repeat(10, 34px); gap: 4px; }
 .md-ministamps .md-stamp { --s: 5px; --hole: 1.2px; width: 34px; height: 43px; aspect-ratio: auto; }
 .md-ministamps-more { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; corner-shape: round; color: var(--ink3); transition: background .15s, color .15s; }
 .md-ministamps-more:hover { background: var(--hover); color: var(--ink); }
 
-/* 邮票：用遮罩打出齿孔 */
+/* Stamps: perforated edges punched out with a mask */
 .md-stamp {
   --s: 9px; --hole: 2.4px;
   position: relative; display: block; width: 100%; aspect-ratio: 4 / 5; overflow: hidden; background: var(--card);
@@ -240,7 +240,7 @@ button.md-stamp:not(:disabled):hover { transform: scale(1.08) rotate(-2deg); }
 @keyframes md-breathe { 50% { opacity: .68; } }
 .tone-0 { background-color: #f6e2d5; } .tone-1 { background-color: #dfe7fb; } .tone-2 { background-color: #dcf0df; } .tone-3 { background-color: #f6dfe9; } .tone-4 { background-color: #efe9cf; } .tone-5 { background-color: #e6dff7; }
 
-/* 瀑布流与列表 */
+/* Masonry feed and list */
 .md-wall-scroll { position: absolute; inset: 0; overflow-y: auto; padding: 72px 20px 96px; }
 .md-wall { columns: 236px; column-gap: 16px; max-width: 1500px; margin: 0 auto; }
 .md-wall-cell { break-inside: avoid; margin-bottom: 16px; padding: 1px; animation: md-rise .6s var(--ease) both; }
@@ -261,7 +261,7 @@ button.md-stamp:not(:disabled):hover { transform: scale(1.08) rotate(-2deg); }
 .md-root.is-narrow .md-row { grid-template-columns: minmax(0, 1fr) 84px 76px; }
 .md-root.is-narrow .md-row > :nth-child(2), .md-root.is-narrow .md-row > :nth-child(3) { display: none; }
 
-/* 详情抽屉 */
+/* Detail drawer */
 .md-people-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .md-people-chips button { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 9px 0 4px; border-radius: 999px; corner-shape: round; font-size: 12px; color: var(--ink3); box-shadow: inset 0 0 0 .5px var(--line-strong); transition: background .15s, color .15s; }
 .md-people-chips button.is-on { background: var(--active); color: var(--ink); box-shadow: inset 0 0 0 .5px var(--ink3); }
@@ -286,7 +286,7 @@ button.md-stamp:not(:disabled):hover { transform: scale(1.08) rotate(-2deg); }
 
 .md-feed-hero { max-width: 560px; margin: 8px auto 34px; }
 
-/* 灵感工作区：左边对话，右边稿面 */
+/* Idea workspace: chat on the left, sheet on the right */
 .md-studio { --canvas: color-mix(in srgb, var(--ink) 3.5%, var(--bg)); --chat-w: 320px; position: absolute; inset: 0; z-index: 31; display: flex; background: var(--canvas); will-change: clip-path; }
 .md-studio-chat { flex: none; width: var(--chat-w); min-height: 0; display: flex; animation: md-rise .5s var(--ease) both; }
 .md-chat { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
@@ -295,7 +295,7 @@ button.md-stamp:not(:disabled):hover { transform: scale(1.08) rotate(-2deg); }
 .md-studio .md-composer { background: var(--card); }
 .md-chat-toggle { display: none; }
 
-/* 灵感卡 */
+/* Idea card */
 .md-idea-card { flex: none; padding: 14px; border-radius: var(--r-xl); background: var(--card); box-shadow: var(--dsw-elevation-soft); }
 .md-idea-label { display: block; color: var(--ink3); font-size: 11.5px; line-height: 16px; margin-bottom: 4px; }
 .md-root .md-idea-text { display: block; width: 100%; padding: 0; border: 0; outline: 0; background: none; resize: none; overflow: hidden; font-size: 14px; line-height: 22px; font-weight: 500; color: var(--ink); }
@@ -316,7 +316,7 @@ button.md-stamp:not(:disabled):hover { transform: scale(1.08) rotate(-2deg); }
 .md-link-btn:hover { color: var(--ink); }
 .md-composer-ctx button { flex: none; margin-left: auto; color: var(--ink3); display: flex; }
 
-/* 稿面 */
+/* Sheet */
 .md-sheet { position: relative; flex: 1; min-width: 0; min-height: 0; padding: 10px 10px 10px 0; container-type: size; overflow: hidden auto; }
 .md-bento { position: relative; height: 100%; display: grid; gap: 10px; grid-template-columns: minmax(0, 1.04fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "hero hero" "article shots"; }
 .md-tile { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; border-radius: var(--r-xl); background: var(--card); box-shadow: var(--dsw-elevation-soft); transition: opacity .35s var(--ease), transform .45s cubic-bezier(.2, 1.2, .4, 1), filter .35s var(--ease); animation: md-rise .6s var(--ease) both; }
@@ -331,7 +331,7 @@ button.md-stamp:not(:disabled):hover { transform: scale(1.08) rotate(-2deg); }
 .md-tile-head .md-icon-btn { width: 28px; height: 28px; border-radius: var(--r-sm); }
 .md-tile-foot { position: absolute; right: 14px; bottom: 10px; color: var(--ink3); font-size: 11.5px; font-variant-numeric: tabular-nums; }
 
-/* 主视觉：整块渐变底 */
+/* Hero: a full gradient panel */
 .md-tile-hero { grid-area: hero; flex-direction: row; align-items: stretch; gap: 20px; min-height: 216px; padding: 22px 24px; overflow: hidden; background:
   radial-gradient(55% 120% at 82% 8%, color-mix(in srgb, #c9b6f2 40%, transparent), transparent 70%),
   radial-gradient(45% 110% at 100% 92%, color-mix(in srgb, #f7b899 42%, transparent), transparent 72%),
@@ -357,7 +357,7 @@ button.md-stamp:not(:disabled):hover { transform: scale(1.08) rotate(-2deg); }
 .md-tile-hero:hover .md-hero-corner, .md-hero-corner:focus-within { opacity: 1; }
 .md-hero-corner .md-icon-btn { width: 28px; height: 28px; border-radius: var(--r-sm); }
 
-/* 封面和配图的拼贴 */
+/* Cover and figure collage */
 .md-collage { flex: none; position: relative; align-self: center; width: min(44%, 400px); aspect-ratio: 16 / 9.4; margin: 6px 4px 0 0; }
 .md-collage > div { position: absolute; padding: 4px; border-radius: 14px; background: var(--card); box-shadow: 0 0 0 .5px var(--line), 0 10px 26px -10px rgb(0 0 0 / .28); transition: transform .5s cubic-bezier(.2, 1.3, .4, 1); }
 .md-collage > div:hover { z-index: 3; transform: rotate(0deg) scale(1.03); }
@@ -368,7 +368,7 @@ button.md-stamp:not(:disabled):hover { transform: scale(1.08) rotate(-2deg); }
 .md-collage-side.is-1 { right: 0; bottom: 6%; transform: rotate(4deg); z-index: 1; }
 .md-collage-side.is-2, .md-collage-side.is-3 { display: none; }
 
-/* 图 */
+/* Images */
 .md-plate { position: relative; width: 100%; height: 100%; min-height: 0; overflow: hidden; line-height: 0; }
 .md-plate.is-wash { background: radial-gradient(90% 90% at 80% 10%, color-mix(in srgb, #c9b6f2 26%, transparent), transparent), radial-gradient(80% 90% at 10% 90%, color-mix(in srgb, #a9cdf5 26%, transparent), transparent), var(--hover); }
 .md-plate.is-clickable { cursor: zoom-in; }
@@ -380,11 +380,11 @@ button.md-stamp:not(:disabled):hover { transform: scale(1.08) rotate(-2deg); }
 .md-plate.is-paper { border-radius: var(--r-sm); background: #fff; box-shadow: 0 0 0 .5px #17171a40; }
 .md-plate.is-paper img { object-fit: cover; }
 .md-plate-mark { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--latin-serif); font-size: 26px; line-height: 1; color: color-mix(in srgb, var(--ink) 12%, transparent); }
-/* 还没生成的分镜格不用白纸，免得暗色界面里一片白 */
+/* Empty storyboard cells skip the white paper, so the dark UI doesn't flash white */
 .md-plate.is-paper:not(:has(img)) { background: var(--hover); box-shadow: none; }
 .md-plate-failed { position: absolute; left: 6px; bottom: 6px; display: inline-flex; align-items: center; gap: 3px; padding: 0 6px; border-radius: var(--r-xs); background: var(--card); color: var(--ink3); font-size: 11px; line-height: 18px; box-shadow: var(--dsw-elevation-soft); }
 
-/* 正文 */
+/* Body copy */
 .md-article-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 0 20px 22px 18px; scroll-behavior: smooth; }
 .md-article-scroll .md-prose { font-size: 14px; line-height: 25px; }
 .md-root .md-article-scroll .md-prose h2 { font-size: 15px; line-height: 24px; margin: 16px 0 6px; }
@@ -407,7 +407,7 @@ button.md-stamp:not(:disabled):hover { transform: scale(1.08) rotate(-2deg); }
 .md-pick { position: absolute; z-index: 4; transform: translate(-50%, calc(-100% - 6px)); display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 11px; border-radius: 999px; corner-shape: round; white-space: nowrap; font-size: 12px; animation: md-pop .3s cubic-bezier(.2, 1.3, .4, 1) both; }
 .md-root .md-pick { background: var(--primary); color: var(--on-primary); box-shadow: var(--dsw-elevation-prominent); }
 
-/* 分镜 */
+/* Storyboard */
 .md-shots { flex: 1 1 0; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(var(--rows2), minmax(0, 1fr)); gap: 12px; padding: 2px 16px 16px; }
 .md-shot { margin: 0; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .md-shot .md-plate { flex: 1; min-height: 0; }
@@ -420,7 +420,7 @@ button.md-stamp:not(:disabled):hover { transform: scale(1.08) rotate(-2deg); }
 .md-tile-shots.is-open .md-shot-meta b { font-size: 16px; }
 .md-tile-shots.is-open .md-shot figcaption p { font-size: 13.5px; line-height: 20px; height: 40px; }
 
-/* 自适应：宽的时候分镜排成 3×2，窄或矮的时候整页滚动 */
+/* Responsive: 3×2 storyboard when wide, the page scrolls when narrow or short */
 @container (min-width: 1040px) {
   .md-bento { grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); }
   .md-shots { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(var(--rows3), minmax(0, 1fr)); }
@@ -437,7 +437,7 @@ button.md-stamp:not(:disabled):hover { transform: scale(1.08) rotate(-2deg); }
   .md-shot .md-plate { flex: none; height: auto; aspect-ratio: 3 / 2; }
 }
 
-/* 窗口太窄时，对话栏改成抽屉 */
+/* On narrow windows the chat dock becomes a drawer */
 .md-root.is-narrow .md-studio { --chat-w: 300px; }
 .md-root.is-compact .md-studio-chat { position: absolute; left: 0; top: 0; bottom: 0; z-index: 12; background: var(--canvas); box-shadow: var(--dsw-elevation-prominent); transform: translateX(-104%); transition: transform .45s cubic-bezier(.2, 1, .3, 1); animation: none; }
 .md-root.is-compact .md-studio.chat-open .md-studio-chat { transform: none; }
@@ -445,7 +445,7 @@ button.md-stamp:not(:disabled):hover { transform: scale(1.08) rotate(-2deg); }
 .md-root.is-compact .md-studio.chat-open .md-chat-toggle { left: calc(var(--chat-w) + 14px); }
 .md-root.is-compact .md-sheet { padding-left: 10px; }
 
-/* 查看大图 */
+/* Full-size viewer */
 .md-viewer { position: absolute; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; padding: 18px; background: color-mix(in srgb, var(--bg) 62%, transparent); backdrop-filter: blur(18px) saturate(140%); animation: md-fade .25s both; }
 .md-viewer-card { display: flex; flex-direction: column; width: 100%; max-width: 960px; max-height: 100%; overflow: hidden; border-radius: var(--r-panel); background: var(--card); box-shadow: var(--dsw-elevation-prominent); }
 .md-viewer-image { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; background: var(--hover); line-height: 0; overflow: hidden; }
@@ -457,7 +457,7 @@ button.md-stamp:not(:disabled):hover { transform: scale(1.08) rotate(-2deg); }
 .md-viewer-text b { display: block; font-weight: 500; }
 .md-viewer-text span { display: block; color: var(--ink3); font-size: 12px; line-height: 18px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
-/* 设置 */
+/* Settings */
 .md-presets { display: flex; flex-wrap: wrap; gap: 4px; }
 .md-presets button { height: 30px; padding: 0 11px; border-radius: var(--r-md); box-shadow: inset 0 0 0 .5px var(--line-strong); font-size: 12.5px; color: var(--ink2); }
 .md-presets button.is-on { background: var(--primary); color: var(--on-primary); box-shadow: none; }
@@ -465,7 +465,7 @@ button.md-stamp:not(:disabled):hover { transform: scale(1.08) rotate(-2deg); }
 .md-advanced { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; color: var(--ink3); font-size: 12.5px; }
 .md-test-sample { display: block; width: 100%; border-radius: var(--r-lg); }
 
-/* 抽屉底部的对话条：对话栏让位给画布时使用 */
+/* Bottom chat bar on the drawer, used when the chat gives way to the canvas */
 .md-sheet-ask { flex: none; padding: 8px 12px 12px; border-top: .5px solid var(--line); }
 .md-sheet-ask-reply { margin: 0 4px 8px; color: var(--ink2); font-size: 12.5px; line-height: 19px; max-height: 96px; overflow-y: auto; white-space: pre-wrap; }
 .md-sheet-ask form { display: flex; align-items: center; gap: 6px; padding: 5px 5px 5px 12px; border-radius: var(--r-xl); background: var(--hover); }
@@ -474,7 +474,7 @@ button.md-stamp:not(:disabled):hover { transform: scale(1.08) rotate(-2deg); }
 .md-sheet-ask-open { display: inline-flex; align-items: center; color: var(--ink3); flex: none; }
 .md-sheet-ask-open:hover { color: var(--ink); }
 
-/* 侧边对话 */
+/* Side chat */
 .md-dock { position: relative; z-index: 26; flex: none; width: var(--dock-w); display: flex; flex-direction: column; min-height: 0; border-left: .5px solid var(--line); background: color-mix(in srgb, var(--card) 62%, transparent); backdrop-filter: blur(30px) saturate(160%); animation: md-dock-in .5s var(--ease) both; }
 @keyframes md-dock-in { from { opacity: 0; transform: translateX(20px); } }
 .md-root.is-narrow .md-dock { z-index: 34; position: absolute; right: 8px; top: 8px; bottom: 8px; width: min(340px, calc(100% - 16px)); border: 0; border-radius: var(--r-panel); box-shadow: var(--dsw-elevation-prominent); background: color-mix(in srgb, var(--card) 92%, transparent); overflow: hidden; }
@@ -509,7 +509,7 @@ button.md-receipt:hover { transform: translateX(2px); }
 .md-composer-ctx span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .md-root .md-composer textarea { flex: 1; min-width: 0; min-height: 32px; padding: 5px 0; border: 0; outline: 0; background: none; resize: none; font-size: 14px; line-height: 22px; }
 
-/* 普通页面 */
+/* Ordinary pages */
 .md-page { position: absolute; inset: 0; overflow-y: auto; padding: 78px 28px 40px; }
 .md-page-head, .md-section-head { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-bottom: 22px; }
 .md-section-head { margin-top: 36px; margin-bottom: 14px; }
@@ -524,7 +524,7 @@ button.md-receipt:hover { transform: translateX(2px); }
 .md-panel > header { display: flex; align-items: center; margin-bottom: 12px; min-height: 28px; }
 .md-root .md-panel h2 { font-size: 14px; line-height: 20px; font-weight: 500; }
 
-/* 看板 */
+/* Board */
 .md-board { display: grid; grid-template-columns: repeat(5, minmax(190px, 1fr)); gap: 10px; align-items: start; overflow-x: auto; padding-bottom: 8px; }
 .md-board-col { padding: 10px; min-height: 320px; border-radius: var(--r-xl); background: var(--hover); transition: background .2s, box-shadow .2s; }
 .md-board-col.is-over { background: var(--active); box-shadow: inset 0 0 0 1px var(--ink3); }
@@ -538,7 +538,7 @@ button.md-receipt:hover { transform: translateX(2px); }
 .md-board-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; padding: 4px 6px 4px; color: var(--ink3); font-size: 11.5px; line-height: 16px; }
 .md-board-meta .is-time { color: var(--accent); }
 
-/* 表格 */
+/* Table */
 .md-table-wrap { border-radius: var(--r-xl); background: var(--card); box-shadow: var(--dsw-elevation-soft); overflow: auto; }
 .md-table { width: 100%; border-collapse: collapse; font-size: 13px; line-height: 20px; }
 .md-table th { position: sticky; top: 0; z-index: 1; background: var(--card); padding: 10px 12px; text-align: left; font-weight: 400; color: var(--ink3); font-size: 12px; white-space: nowrap; border-bottom: .5px solid var(--line); }
@@ -553,7 +553,7 @@ button.md-receipt:hover { transform: translateX(2px); }
 .md-table-title strong { display: block; font-weight: 500; }
 .md-table-title small { display: block; color: var(--ink3); font-size: 11.5px; line-height: 16px; }
 
-/* 对话框与提示 */
+/* Dialogs and toasts */
 .md-dialog-mask { position: absolute; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 20px; background: var(--dsw-alias-bg-mask-1); animation: md-fade .18s both; }
 .md-dialog { max-width: 100%; max-height: 100%; overflow: auto; padding: 18px 20px 20px; border-radius: var(--r-panel); background: var(--card); box-shadow: var(--dsw-elevation-prominent); animation: md-pop .4s cubic-bezier(.2, 1.3, .4, 1) both; }
 @keyframes md-pop { from { opacity: 0; transform: scale(.94) translateY(10px); } }
@@ -584,7 +584,7 @@ button.md-receipt:hover { transform: translateX(2px); }
 }
 
 
-/* 视频封面 */
+/* Video cover */
 .md-poster { position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 10px; line-height: 0; background: var(--hover); container-type: inline-size; }
 .md-poster[role="button"] { cursor: zoom-in; }
 .md-poster img { display: block; width: 100%; height: 100%; object-fit: cover; animation: md-develop .9s var(--ease) both; }
@@ -604,7 +604,7 @@ button.md-receipt:hover { transform: translateX(2px); }
 .md-style-pick { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: .5px solid var(--line); color: var(--ink3); font-size: 12px; line-height: 18px; }
 .md-root .md-style-pick select { flex: 1; min-width: 0; height: 28px; padding: 0 6px; border: 0; border-radius: var(--r-sm); background: var(--hover); color: var(--ink); font-size: 12.5px; outline: 0; }
 
-/* 精致页面的共同底：和工作区一样的底色 + 格子 */
+/* Shared base for polished pages: the workspace background plus grid */
 .md-board-page { position: absolute; inset: 0; overflow: hidden auto; padding: 64px 10px 10px; background: color-mix(in srgb, var(--ink) 3.5%, var(--bg)); container-type: size; }
 .md-i-hero { flex-direction: row; align-items: stretch; gap: 20px; min-height: 176px; padding: 20px 24px; background:
   radial-gradient(55% 120% at 82% 8%, color-mix(in srgb, #c9b6f2 40%, transparent), transparent 70%),
@@ -617,7 +617,7 @@ button.md-receipt:hover { transform: translateX(2px); }
 .md-i-sample { position: absolute; right: 16px; bottom: 10px; color: var(--ink4); font-size: 11px; }
 .md-i-hero.is-empty { min-height: 280px; }
 
-/* 排期 */
+/* Schedule */
 .md-schedule { height: 100%; min-height: 620px; display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr) 248px; }
 @container (max-width: 760px) { .md-schedule { height: auto; grid-template-columns: minmax(0, 1fr); } .md-cal-tile { height: 720px; } .md-tray { height: 420px; flex: none; } }
 .md-cal-tile { padding: 14px 16px 16px; }
@@ -680,7 +680,7 @@ button.md-receipt:hover { transform: translateX(2px); }
 .md-root .md-tray-item:hover { background: var(--hover); }
 .md-tray-item > span:last-child { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* 复盘 */
+/* Insights */
 .md-insights { min-height: 100%; display: grid; gap: 10px; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); grid-template-rows: auto minmax(240px, 1fr) minmax(250px, 1fr); grid-template-areas: "hero hero" "trend platforms" "top advice"; }
 @container (max-width: 760px) { .md-insights { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: "hero" "trend" "platforms" "top" "advice"; } .md-i-trend { height: 300px; } }
 .md-insights .md-i-hero { grid-area: hero; }
@@ -725,7 +725,7 @@ button.md-receipt:hover { transform: translateX(2px); }
 .md-i-tip strong { display: block; font-weight: 500; font-size: 13.5px; line-height: 20px; }
 .md-i-tip p { margin: 1px 0 6px; color: var(--ink3); font-size: 12px; line-height: 18px; }
 
-/* 风格 */
+/* Style */
 .md-style-page { display: flex; flex-direction: column; gap: 10px; min-height: 100%; }
 .md-style-hero { flex: none; min-height: 164px; }
 .md-inline-avatar { display: inline-flex; width: 1.2em; height: 1.2em; vertical-align: -.22em; font-size: .9em; }
@@ -755,7 +755,7 @@ button.md-receipt:hover { transform: translateX(2px); }
 .md-rule-empty { padding: 8px 10px 12px; font-size: 13px; }
 .md-rules .md-tile-head .md-pill { margin-left: 4px; }
 
-/* 抓账号 */
+/* Account import */
 .md-setup-lead { color: var(--ink2); font-size: 13px; line-height: 20px; }
 .md-setup ol { display: flex; flex-direction: column; gap: 14px; margin: 14px 0 16px; counter-reset: step; }
 .md-setup li { position: relative; padding-left: 30px; counter-increment: step; }
@@ -773,7 +773,7 @@ button.md-receipt:hover { transform: translateX(2px); }
 .md-monid-balance { align-self: center; color: var(--ink3); font-size: 12px; white-space: nowrap; }
 .md-root .md-inline-link { color: var(--dsw-alias-link); font-size: inherit; line-height: inherit; }
 
-/* 风格板块 */
+/* Style sections */
 .md-style-icon { flex: none; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; background: var(--hover); font-size: 21px; line-height: 1; }
 .md-inline-emoji { font-size: .92em; }
 .md-style-section > h2 { display: flex; align-items: center; gap: 6px; margin: 6px 2px 8px; color: var(--ink2); font-size: 13px; line-height: 20px; font-weight: 500; }
@@ -784,7 +784,7 @@ button.md-receipt:hover { transform: translateX(2px); }
 .md-style-page .md-style-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 .md-style-page .md-style blockquote { font-size: 13px; line-height: 21px; }
 
-/* 空状态 */
+/* Empty state */
 .md-hero-hint { margin-top: 10px; color: var(--ink3); font-size: 12.5px; line-height: 18px; animation: md-rise .5s var(--ease) both; }
 .md-tray-empty { padding: 4px 2px 10px; color: var(--ink3); font-size: 12px; line-height: 18px; }
 
@@ -792,7 +792,7 @@ button.md-receipt:hover { transform: translateX(2px); }
 .md-root button.md-plate-failed { cursor: pointer; }
 .md-root button.md-plate-failed:hover { color: var(--ink); }
 
-/* 手机宽度：DSH 0.2.2 起网页版可以在手机上打开。顶栏导航可横向滑动，次要按钮收起，灵感墙标题缩到屏幕宽度内 */
+/* Phone width: since DSH 0.2.2 the web app opens on phones. Top nav scrolls sideways, secondary buttons collapse, the hero title fits the screen */
 .md-root { container: md-root / inline-size; }
 @container md-root (max-width: 560px) {
   .md-topbar { gap: 6px; padding: 10px 10px 10px max(10px, var(--dsh-frame-leading-clearance, 0px)); }
@@ -808,7 +808,7 @@ button.md-receipt:hover { transform: translateX(2px); }
   .md-board-page { padding-top: 58px; }
 }
 
-/* 记灵感时拉到眼前的相关灵感 */
+/* Related ideas pulled up while capturing */
 .md-node.is-related { z-index: 9; }
 .md-node.is-related .md-card, .md-wall-cell.is-related .md-card { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--accent, #6b5cff) 55%, transparent), var(--dsw-elevation-soft); }
 .md-node.is-dim { opacity: .28; filter: saturate(.5); }

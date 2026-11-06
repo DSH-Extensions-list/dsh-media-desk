@@ -1,4 +1,4 @@
-// 合成视频封面：有画面就叠大字，没有画面就用渐变做一张纯文字封面。
+// Composite the video cover: big text over the frame, or a gradient type-only cover when there's no frame.
 import { t } from './i18n.js'
 
 const WIDTH = 1920
@@ -13,7 +13,7 @@ function loadImage(src) {
   })
 }
 
-// 中文按字断行，英文按词断行，单词本身太长时再按字母拆开
+// Tokenise into words, whitespace and single characters, so an over-long word can split by letter
 function wrap(ctx, text, maxWidth, maxLines) {
   const lines = []
   let line = ''
@@ -62,8 +62,8 @@ function drawBackground(ctx) {
 }
 
 /**
- * @param {{src?: string, text: string}} options - 封面图地址和封面大字。
- * @returns {Promise<HTMLCanvasElement>} 1920×1080 的封面。
+ * @param {{src?: string, text: string}} options - Cover image source and the cover line.
+ * @returns {Promise<HTMLCanvasElement>} A 1920×1080 cover.
  */
 export async function composeCover({ src, text }) {
   const canvas = document.createElement('canvas')
@@ -81,7 +81,7 @@ export async function composeCover({ src, text }) {
     ctx.fillStyle = shade
     ctx.fillRect(0, 0, WIDTH, HEIGHT)
   }
-  // 西文字母大约半个汉字宽
+  // Estimate width in full-width units: Latin letters are roughly half.
   const units = [...text].reduce((n, ch) => n + (/[\u0000-\u024f]/.test(ch) ? 0.55 : 1), 0)
   const size = units > 12 ? 112 : 148
   ctx.font = `700 ${size}px "Songti SC", "STSong", "Noto Serif SC", serif`

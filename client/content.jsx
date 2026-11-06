@@ -1,8 +1,8 @@
-// 内容管理：看板和表格是同一份数据的两种看法。
+// Content: the board and the table are two views of the same data.
 import React from 'react'
 import { dispatchOps, openItem, setDesk, useDesk } from './desk.js'
 import { Empty, Icon, Segmented } from './ui.jsx'
-import { plural, t, useLang } from './i18n.js'
+import { plural, t } from './i18n.js'
 import { KIND_LABEL, STATUSES, STATUS_LABEL, displayItem, fmtWhen, posterOf, relativeDay } from './util.js'
 
 function useContentItems() {
@@ -15,7 +15,7 @@ function useContentItems() {
 }
 
 function BoardCard({ item: raw }) {
-  // 有成稿时显示成稿的标题和封面
+  // Show the draft's title and cover once it exists
   const item = displayItem(raw)
   const poster = posterOf(item)
   return (
@@ -49,7 +49,7 @@ function Board({ items }) {
   return (
     <div className="md-board">
       {STATUSES.map((status) => {
-        // 还停留在灵感状态的分支只是发散草图，不占看板的位置
+        // Branches still at idea status are sketches, so they don't take a board slot
         const rows = items.filter(i => i.status === status && !(i.parentId && i.status === 'idea'))
         return (
           <section
@@ -85,7 +85,7 @@ function Board({ items }) {
   )
 }
 
-// label 是中文原文，显示时再翻译
+// Column labels; t() fills them at display time.
 const COLUMNS = [
   { key: 'title', label: 'Content', get: i => i.title },
   { key: 'status', label: 'Status', get: i => STATUSES.indexOf(i.status) },
@@ -142,7 +142,6 @@ function Table({ items }) {
 }
 
 export function ContentView() {
-  useLang()
   const [mode, setMode] = React.useState('board')
   const items = useContentItems()
   const query = useDesk(s => s.query)

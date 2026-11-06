@@ -1,4 +1,4 @@
-// 邮票灵感日历：每天一张邮票，逼自己多记一点。
+// Stamp calendar: one stamp per day, a nudge to note more.
 import React from 'react'
 import { openCapture } from './card.jsx'
 import { openItem, setDesk, useDesk } from './desk.js'
@@ -21,7 +21,7 @@ export function useDayMap() {
 }
 
 function coverOf(list) {
-  // 优先用当天带图的内容做邮票
+  // Prefer an item with an image for the stamp
   return list.find(item => posterOf(item)) ?? list[0]
 }
 
@@ -43,7 +43,7 @@ export function Stamp({ list, today, onOpen, label }) {
   )
 }
 
-/** 首屏文字下方：最近十天的邮票。 */
+/** Below the hero text: stamps for the last ten days. */
 export function MiniStamps() {
   const items = useDesk(s => s.state.items)
   const days = useDayMap()

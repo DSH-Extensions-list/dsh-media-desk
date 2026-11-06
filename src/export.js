@@ -1,14 +1,10 @@
-// 一键保存：把成稿写成一个普通文件夹，脚本、封面、配图和分镜都在里面。
-import { existsSync } from 'node:fs'
+// One-click save: write a draft out as a plain folder with the script, cover, figures and storyboard.
 import { copyFile, mkdir, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { extname, join } from 'node:path'
-import { currentLang, tr } from './i18n.js'
+import { tr } from './i18n.js'
 
 export function defaultExportDir() {
-  // 已经有中文文件夹的老用户切到英文后继续用原来的文件夹
-  const zh = join(homedir(), 'Documents', 'Media Desk')
-  if (currentLang() !== 'en' || existsSync(zh)) return zh
   return join(homedir(), 'Documents', 'Media Desk')
 }
 
@@ -24,20 +20,17 @@ function folderName(title) {
 }
 
 function cell(text) {
-  return String(text ?? '').replace(/\|/g, '｜').replace(/\n/g, ' ')
+  return String(text ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ')
 }
 
 /**
- * @param {object} production - 成稿。
- * @param {{filesDir: string, exportDir: string, videoCover?: Buffer}} options - 素材目录、保存位置和合成好的视频封面。
- * @returns {Promise<{path: string, files: string[]}>} 文件夹路径和写入的文件名。
+ * @param {object} production - The finished draft.
+ * @param {{filesDir: string, exportDir: string, videoCover?: Buffer}} options - Asset folder, save location and composited video cover.
+ * @returns {Promise<{path: string, files: string[]}>} Folder path and written file names.
  */
 export async function saveProduction(production, { filesDir, exportDir, videoCover }) {
-  // 英文界面用纯 ASCII 文件名，方便在别的系统和工具里打开
-  const en = currentLang() === 'en'
-  const names = en
-    ? { cover: 'cover-original', videoCover: 'video-cover.jpg', figure: i => `figure-${i}`, shot: n => `shot-${n}`, script: 'script.md', board: 'storyboard.md' }
-    : { cover: '封面原图', videoCover: '视频封面.jpg', figure: i => `配图${i}`, shot: n => `分镜${n}`, script: '脚本.md', board: '分镜脚本.md' }
+  // Plain ASCII file names open the same on any OS and in any tool
+  const names = { cover: 'cover-original', videoCover: 'video-cover.jpg', figure: i => `figure-${i}`, shot: n => `shot-${n}`, script: 'script.md', board: 'storyboard.md' }
   const target = production.savedPath || join(exportDir, folderName(production.title))
   await mkdir(target, { recursive: true })
   const files = []
@@ -65,7 +58,7 @@ export async function saveProduction(production, { filesDir, exportDir, videoCov
     shots.push({ shot, file: await copy(shot, names.shot(String(i + 1).padStart(2, '0'))) })
   }
 
-  // 配图放回对应小标题那一节的末尾
+  // Put each figure back at the end of the section its heading names
   const sections = String(production.article ?? '').split(/\n(?=##\s)/)
   const unplaced = []
   for (const { image, file } of figures) {
@@ -80,9 +73,9 @@ export async function saveProduction(production, { filesDir, exportDir, videoCov
   files.push(names.script)
 
   if (shots.length) {
-    const seconds = value => (value === undefined || value === null ? '' : en ? `${value}s` : `${value} 秒`)
+    const seconds = value => (value === undefined || value === null ? '' : `${value}s`)
     const rows = shots.map(({ shot, file }, i) => `| ${i + 1} | ${cell(shot.shot)} | ${seconds(shot.seconds)} | ${cell(shot.visual)} | ${cell(shot.voice)} | ${file ? `![](${file})` : ''} |`)
-    const heading = en ? `# ${production.title}: storyboard\n\n| Shot | Size | Length | Visual | Voice-over | Frame |` : `# ${production.title}：分镜头脚本\n\n| 镜号 | 景别 | 时长 | 画面 | 口播 | 分镜图 |`
+    const heading = `# ${production.title}: storyboard\n\n| Shot | Size | Length | Visual | Voice-over | Frame |`
     await writeFile(join(target, names.board), `${heading}\n| --- | --- | --- | --- | --- | --- |\n${rows.join('\n')}\n`)
     files.push(names.board)
   }

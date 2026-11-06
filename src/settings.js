@@ -1,4 +1,5 @@
-// 工作台设置。密钥和内容数据分开存放，文件权限 600，也不会返回给浏览器。
+// Media Desk settings. The API key lives apart from content data, the file is mode 600,
+// and the key is never sent back to the browser.
 import { chmod, readFile, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tr } from './i18n.js'
@@ -23,7 +24,7 @@ export class Settings {
   }
 
   async read() {
-    // 每次都读文件：桌面版和 Web 版可能同时运行
+    // Read the file every time: the desktop and web builds can run at once.
     try {
       const saved = JSON.parse(await readFile(this.file, 'utf8'))
       this.value = { ...DEFAULTS, ...saved, image: { ...DEFAULTS.image, ...saved.image } }
@@ -34,7 +35,7 @@ export class Settings {
     return this.value
   }
 
-  /** 空密钥表示不修改，clearKey 才会删除。 */
+  /** An empty key means "leave it alone"; only clearKey removes it. */
   async update(patch) {
     const current = await this.read()
     const next = structuredClone(current)
@@ -79,7 +80,7 @@ export function imageReady(settings) {
   return Boolean(settings.image.baseUrl && settings.image.model && settings.image.apiKey)
 }
 
-/** 发给浏览器的版本：只告诉它有没有密钥和末四位。 */
+/** The copy sent to the browser: whether a key exists, and its last four characters. */
 export function publicSettings(settings) {
   const { apiKey, ...image } = settings.image
   return { ...settings, image: { ...image, hasKey: Boolean(apiKey), keyHint: apiKey ? apiKey.slice(-4) : '' }, imageReady: imageReady(settings) }

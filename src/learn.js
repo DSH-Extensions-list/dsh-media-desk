@@ -1,10 +1,11 @@
-// 自我强化：从真实数据和你对草稿的修改里提炼规则，确认后才生效，并可导出成 DeepSeek Harness Skill。
+// Self-improvement: turn real numbers and your edits to drafts into writing rules.
+// A rule only takes effect after you confirm it, and the active set can be exported as a DSH skill.
 import { mkdir, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { activeStyle, styleToVoice } from './style.js'
-import { platformName, tr } from './i18n.js'
+import { tr } from './i18n.js'
 
-/** 按这台电脑的时区算日期，北京时间早上发的内容不会算到前一天。 */
+/** Bucket by this machine's local date, so a morning post isn't filed under the day before. */
 function localDay(iso) {
   const d = new Date(iso)
   return Number.isNaN(d.getTime()) ? String(iso).slice(0, 10) : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -14,7 +15,7 @@ function sum(rows, key) {
   return rows.reduce((total, row) => total + (row[key] || 0), 0)
 }
 
-/** 每篇内容的累计数据。 */
+/** Running totals per item. */
 function itemTotals(state) {
   const totals = new Map()
   for (const metric of state.metrics) {
@@ -26,7 +27,7 @@ function itemTotals(state) {
   return totals
 }
 
-/** 有了真实数据后，示例数据就不再参与统计。 */
+/** Once there is real data, the sample rows stop counting towards insights. */
 function realMetrics(state) {
   const real = state.metrics.filter(metric => !metric.sample)
   return real.length ? real : state.metrics
@@ -50,7 +51,7 @@ function bestGroup(rows) {
   return ranked
 }
 
-/** 对比 AI 原稿和你改完的版本，粗略判断修改方向。 */
+/** Compare the model's draft with what you ended up with, and guess which way you edit. */
 function editSignals(state) {
   const signals = []
   for (const item of state.items) {
@@ -72,9 +73,10 @@ function editSignals(state) {
 }
 
 /**
- * 基于现有数据计算规则提案。只有样本足够才提案，不凑数。
- * @param {object} state - 当前状态。
- * @returns {Array<{name: string, rule: string, evidence: string, confidence: number, source: string}>} 提案。
+ * Propose rules from the data on hand. Only when there is enough of a sample,
+ * so it never invents a pattern to fill the list.
+ * @param {object} state - Current state.
+ * @returns {Array<{name: string, rule: string, evidence: string, confidence: number, source: string}>} Proposals.
  */
 export function proposeRules(state) {
   const proposals = []
@@ -82,14 +84,14 @@ export function proposeRules(state) {
   const published = state.items.filter(item => totals.has(item.id))
   const rows = published.map(item => ({ item, views: totals.get(item.id).views }))
 
-  // 有些平台公开接口读不到播放量，这些内容不参与跨平台比较
+  // Some platforms don't expose view counts publicly, so those rows can't join a cross-platform comparison.
   const byPlatform = bestGroup(rows.filter(row => row.views > 0).map(row => ({ key: row.item.platform, value: row.views })))
   if (byPlatform.length >= 2 && byPlatform[0].avg > byPlatform[1].avg * 1.3) {
     const best = byPlatform[0]
-    const platform = platformName(best.key)
+    const platform = best.key
     proposals.push({
       name: tr('Publish first on {platform}', { platform }), rule: tr('Publish each topic on {platform} first, then adapt it for the other platforms.', { platform }),
-      evidence: tr('{platform} averages {avg} views, ahead of {second} in second place at {secondAvg}', { platform, avg: Math.round(best.avg).toLocaleString('en-US'), second: platformName(byPlatform[1].key), secondAvg: Math.round(byPlatform[1].avg).toLocaleString('en-US') }), confidence: Math.min(0.85, 0.4 + best.n * 0.12), source: tr('Insights'),
+      evidence: tr('{platform} averages {avg} views, ahead of {second} in second place at {secondAvg}', { platform, avg: Math.round(best.avg).toLocaleString('en-US'), second: byPlatform[1].key, secondAvg: Math.round(byPlatform[1].avg).toLocaleString('en-US') }), confidence: Math.min(0.85, 0.4 + best.n * 0.12), source: tr('Insights'),
     })
   }
 
@@ -117,9 +119,9 @@ export function proposeRules(state) {
 }
 
 /**
- * 面向复盘页的汇总。
- * @param {object} state - 当前状态。
- * @returns {object} 概览、趋势、平台分布、排行与角度×人物覆盖。
+ * The summary the Review page renders.
+ * @param {object} state - Current state.
+ * @returns {object} Totals, trend, platform split, leaderboard and angle x persona coverage.
  */
 export function computeInsights(state) {
   const metrics = realMetrics(state)
@@ -146,7 +148,7 @@ export function computeInsights(state) {
     .sort((a, b) => (b.views - a.views) || (b.engaged - a.engaged))
   const views = sum(metrics, 'views')
   const engaged = metrics.reduce((total, metric) => total + engagement(metric), 0)
-  // 互动率只算读得到播放量的内容，否则分子分母对不上
+  // Engagement rate only counts rows that report views, otherwise the fraction is meaningless.
   const withViews = metrics.filter(metric => metric.views > 0)
   const accounts = state.accounts.filter(account => (onlyReal ? !account.sample : true))
   return {
@@ -163,28 +165,28 @@ function slug(text, fallback) {
 }
 
 /**
- * 把生效中的规则写成一个 DeepSeek Harness 用户级 Skill（<home>/skills/<name>/SKILL.md）。
- * 内容由用户在界面确认后点击导出才写入。
- * @param {object} state - 当前状态。
- * @param {string} home - DSH_HOME。
- * @returns {Promise<{name: string, path: string, rules: number}>} 写入结果。
+ * Write the active rules out as a user-level DSH skill (<home>/skills/<name>/SKILL.md).
+ * Nothing is written until the user confirms in the interface and clicks export.
+ * @param {object} state - Current state.
+ * @param {string} home - DSH_HOME.
+ * @returns {Promise<{name: string, path: string, rules: number}>} What was written.
  */
 export async function exportSkill(state, home) {
-  // 示例规则不是作者的风格，不能写进真实 Skill
+  // Sample rules aren't the author's own voice, so they never go into a real skill.
   const rules = state.skills.filter(skill => !skill.sample && (skill.status === 'active' || skill.status === 'exported'))
   const picked = activeStyle(state)
   const style = picked && !picked.preset ? picked : null
   const name = 'media-desk-voice'
   const dir = join(home, 'skills', name)
   if (!rules.length && !style) {
-    // 之前导出过的旧 Skill 不再代表现在的设置，撤掉它
+    // An older exported skill no longer reflects the current rules, so take it down.
     await rm(dir, { recursive: true, force: true })
     throw Object.assign(new Error(tr('You don\'t have your own style or writing rules yet. Sample rules and presets are never exported.')), { status: 400 })
   }
   await mkdir(dir, { recursive: true })
   const description = tr('The author\'s social media writing style and rules. Use it when writing topics, scripts, titles or cover text.')
   const styleBlock = style ? `## ${tr('Style: {name}', { name: style.name })}\n\n${styleToVoice(style)}\n\n` : ''
-  const ruleBlock = rules.length ? `## ${tr('Rules to follow')}\n\n${rules.map(r => `- **${r.name}**${tr('：')}${r.rule}${r.evidence ? tr(' (based on: {evidence})', { evidence: r.evidence }) : ''}`).join('\n')}\n` : ''
+  const ruleBlock = rules.length ? `## ${tr('Rules to follow')}\n\n${rules.map(r => `- **${r.name}**: ${r.rule}${r.evidence ? tr(' (based on: {evidence})', { evidence: r.evidence }) : ''}`).join('\n')}\n` : ''
   const body = `---\nname: ${name}\ndescription: ${description}\n---\n\n# ${tr('Writing style')}\n\n${tr('Generated by Media Desk. Updated {date}.', { date: new Date().toISOString().slice(0, 10) })}\n\n${styleBlock}${ruleBlock}`
   await writeFile(join(dir, 'SKILL.md'), body)
   return { name, path: join(dir, 'SKILL.md'), rules: rules.length, slug: slug(name, 'media-desk') }

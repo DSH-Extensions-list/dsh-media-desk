@@ -1,10 +1,10 @@
-// 设置：开放接入的生图模型和保存位置。
+// Settings: the open image model and where drafts are saved.
 import React from 'react'
 import { saveSettings, setDesk, testImage, useDesk } from './desk.js'
-import { t, useLang } from './i18n.js'
+import { t } from './i18n.js'
 import { Dialog, Icon } from './ui.jsx'
 
-// 常见服务的 OpenAI 兼容地址，模型名以各家文档为准。label 是中文原文，显示时再翻译
+// OpenAI-compatible endpoints for common services; check each vendor's docs for model names. Labels are translated at display time.
 const PRESETS = [
   { id: 'openai', label: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-image-1', size: '1536x1024', quality: 'medium', extra: '' },
   { id: 'xai', label: 'xAI', baseUrl: 'https://api.x.ai/v1', model: 'grok-2-image', size: '', quality: '', extra: '' },
@@ -15,7 +15,6 @@ const PRESETS = [
 ]
 
 export function SettingsDialog() {
-  useLang()
   const open = useDesk(s => s.settingsOpen)
   const settings = useDesk(s => s.settings)
   const [form, setForm] = React.useState(null)

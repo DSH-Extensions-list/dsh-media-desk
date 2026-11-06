@@ -1,15 +1,16 @@
-// 工作台的唯一写入口：对话、界面操作都走这里，统一校验字段并产出回执。
-// 模型输出也是不可信输入，所以这里只放行白名单字段。
-import { currentLang, platformName, tr } from './i18n.js'
+// The workbench's single write path: chat and UI actions both go through it, so
+// fields are validated and receipts produced in one place.
+// Model output is untrusted input too, so only whitelisted fields get through.
+import { tr } from './i18n.js'
 
 export const STATUSES = ['idea', 'outline', 'draft', 'ready', 'published']
 export const STATUS_LABEL = { idea: 'Idea', outline: 'Outline', draft: 'Draft', ready: 'Ready', published: 'Published' }
 export const KINDS = ['image', 'video', 'web', 'quote', 'note']
 export const PLATFORMS = ['WeChat', 'RedNote', 'Douyin', 'Bilibili', 'WeChat Channels', 'TikTok', 'Instagram', 'YouTube', 'X']
 
-/** 状态在当前语言下的名字。 */
+/** The display name of a status. */
 export function statusLabel(status) {
-  return tr(STATUS_LABEL[status] ?? String(status))
+  return STATUS_LABEL[status] ?? String(status)
 }
 
 const ITEM_FIELDS = {
@@ -54,7 +55,7 @@ function coerce(type, value) {
     case 'media': {
       if (value === null) return null
       if (!value || typeof value.src !== 'string') return undefined
-      // 媒体只允许插件自己的相对路径或 http(s) 地址
+      // Media may only point at the plugin's own relative paths or http(s) URLs
       const local = /^media-desk\/(assets|files)\/[\w.-]+$/.test(value.src)
       if (!local && !isHttpUrl(value.src)) return undefined
       const poster = typeof value.poster === 'string' && (/^media-desk\/(assets|files)\/[\w.-]+$/.test(value.poster) || isHttpUrl(value.poster)) ? value.poster : undefined
@@ -96,17 +97,17 @@ export function fmtWhen(iso) {
 
 function fmtShort(iso) {
   const d = new Date(iso)
-  return currentLang() === 'en' ? `${MONTHS_EN[d.getMonth()]} ${d.getDate()}` : `${d.getMonth() + 1}月${d.getDate()}日`
+  return `${MONTHS_EN[d.getMonth()]} ${d.getDate()}`
 }
 
-/** 改状态时一并维护发布时间：进入已发布记下时间，离开已发布清掉。 */
+/** Keep the publish time in step with status: set it on publish, clear it on the way out. */
 function applyStatus(item, status) {
   item.status = status
   if (status === 'published' && !item.publishedAt) item.publishedAt = new Date().toISOString()
   if (status !== 'published') delete item.publishedAt
 }
 
-/** 排上日历就是待发布（还没成稿的算大纲）；取消排期退回去。已发布的不动。 */
+/** Scheduling means ready to publish (outline without a draft); unscheduling steps it back. Published items are left alone. */
 function applySchedule(item, when) {
   item.scheduledAt = when
   if (item.status === 'published') return
@@ -123,9 +124,9 @@ const handlers = {
       id: newId('it'), kind: 'note', title: '', body: '', tags: [], status: 'idea', personaIds: [], createdAt: now, drafts: {}, ...fields,
     }
     if (!item.title && !item.body && !item.media) throw new Error(tr('The idea is empty'))
-    // 只贴了图或视频也要有个名字，卡片和回执才有东西可显示
+    // Even an image or video needs a title, so cards and receipts have something to show
     if (!item.title) item.title = short(item.body, 28) || (item.media ? tr(item.kind === 'video' ? 'Video from {date}' : 'Image from {date}', { date: fmtShort(now) }) : '')
-    // 新灵感落在首屏文字旁边，一眼就能看到，也不会打乱已有布局
+    // New ideas land beside the hero text: visible at a glance without disturbing the layout
     if (!item.pos && !item.parentId) {
       const n = state.items.filter(row => !row.parentId && row.pos).length
       const scale = 1 + (n % 6) * 0.2
@@ -159,7 +160,7 @@ const handlers = {
     const platform = coerce('platform', op.platform)
     if (platform !== undefined) item.platform = platform
     applySchedule(item, when)
-    return { text: when ? tr('Scheduled "{title}" for {when}', { title: short(item.title), when: fmtWhen(when) }) + (item.platform ? ` · ${platformName(item.platform)}` : '') : tr('Unscheduled "{title}"', { title: short(item.title) }), target: item.id, kind: 'item' }
+    return { text: when ? tr('Scheduled "{title}" for {when}', { title: short(item.title), when: fmtWhen(when) }) + (item.platform ? ` · ${item.platform}` : '') : tr('Unscheduled "{title}"', { title: short(item.title) }), target: item.id, kind: 'item' }
   },
   set_status(state, op) {
     const item = findById(state.items, op.id)
@@ -265,18 +266,18 @@ const handlers = {
     const metric = { id: newId('m'), date: new Date().toISOString(), views: 0, likes: 0, comments: 0, shares: 0, saves: 0, ...pick(METRIC_FIELDS, op) }
     if (!metric.platform) throw new Error(tr('Numbers need a platform'))
     state.metrics.push(metric)
-    return { text: tr('Logged {views} views on {platform}', { platform: platformName(metric.platform), views: metric.views }) }
+    return { text: tr('Logged {views} views on {platform}', { platform: metric.platform, views: metric.views }) }
   },
   add_account(state, op, now) {
     const account = { id: newId('ac'), platform: '', handle: '', url: null, followers: null, createdAt: now, ...pick(ACCOUNT_FIELDS, op) }
     if (!account.platform && !account.handle && !account.url) throw new Error(tr('The account details are empty'))
     state.accounts.push(account)
-    return { text: tr('Added account profile "{name}"', { name: account.handle || account.title || platformName(account.platform) }), target: account.id, kind: 'account' }
+    return { text: tr('Added account profile "{name}"', { name: account.handle || account.title || account.platform }), target: account.id, kind: 'account' }
   },
   update_account(state, op) {
     const account = findById(state.accounts, op.id)
     Object.assign(account, pick(ACCOUNT_FIELDS, op))
-    return { text: tr('Updated account profile "{name}"', { name: account.handle || account.title || platformName(account.platform) }) }
+    return { text: tr('Updated account profile "{name}"', { name: account.handle || account.title || account.platform }) }
   },
   delete_account(state, op) {
     findById(state.accounts, op.id)
@@ -292,7 +293,7 @@ const handlers = {
     state.skills = state.skills.filter(row => !row.sample)
     state.styles = (state.styles ?? []).filter(row => !row.sample)
     if (!state.styles.some(row => row.id === state.activeStyleId)) state.activeStyleId = null
-    // 自己的数据可能挂在示例内容下面：父条目没了就断开，指标没了对应内容就删掉
+    // User data can hang off sample content: detach items whose parent is gone, drop metrics whose item is gone
     const ids = new Set(state.items.map(row => row.id))
     for (const row of state.items) if (row.parentId && !ids.has(row.parentId)) row.parentId = null
     state.metrics = state.metrics.filter(row => !row.itemId || ids.has(row.itemId))
@@ -302,10 +303,11 @@ const handlers = {
 }
 
 /**
- * 依次执行一批操作。任何一条失败都不影响已成功的操作，失败写进回执。
- * @param {object} state - 会被就地修改的状态。
- * @param {Array<object>} ops - 操作列表。
- * @returns {{receipts: Array<object>, errors: string[]}} 面向用户的回执。
+ * Apply a batch of operations in order. One failure doesn't roll back the ones that
+ * succeeded; failures go into the receipts.
+ * @param {object} state - State to modify in place.
+ * @param {Array<object>} ops - Operations to apply.
+ * @returns {{receipts: Array<object>, errors: string[]}} User-facing receipts.
  */
 export function applyOps(state, ops) {
   const receipts = []

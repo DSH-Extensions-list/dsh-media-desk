@@ -1,13 +1,13 @@
-// 排期：发布排期和灵感日历是同一张日历。每天一张灵感邮票，发布的内容从右边拖上来。
+// Scheduling: publish slots and the idea calendar are one calendar. Each day gets a stamp; drag published work in from the right.
 import React from 'react'
 import { dispatchOps, openItem, useDesk } from './desk.js'
-import { lang, t, useLang } from './i18n.js'
+import { t } from './i18n.js'
 import { Stamp, useDayMap } from './stamps.jsx'
 import { IconButton } from './ui.jsx'
 import { STATUS_LABEL, computeStreak, dayKey, displayItem, fmtDate, fmtTime, posterOf, relativeDay, unit } from './util.js'
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-// 中文原文，显示时再翻译
+// Short weekday names.
 const WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const TYPE = 'text/media-desk-item'
 
@@ -50,7 +50,7 @@ function Calendar({ items }) {
   const first = new Date(y, m, 1).getDay()
   const cells = []
   for (let i = 0; i < 42; i += 1) cells.push(new Date(y, m, i - first + 1))
-  // 2 月 1 日正好是周日时只需要 4 行，多数月份 5 行，少数 6 行
+  // Feb 1 on a Sunday fits in 4 rows; most months need 5, a few need 6
   const rows = cells[28].getMonth() !== m ? cells.slice(0, 28) : cells[35].getMonth() === m ? cells : cells.slice(0, 35)
   const byDay = React.useMemo(() => {
     const map = new Map()
@@ -170,7 +170,7 @@ function Rail({ items }) {
               <div className="md-tray-grid">{ready.map(item => <TrayCard key={item.id} item={item} />)}</div>
             </>
           ) : null}
-          <h3>{lang() === 'en' ? t('Ideas') : 'Idea'} <span>{ideas.length}</span></h3>
+          <h3>{t('Ideas')} <span>{ideas.length}</span></h3>
           {!ready.length && !ideas.length ? <p className="md-tray-empty">{t('Add an idea or finish a draft, then drag it onto the calendar.')}</p> : null}
           <div className="md-tray-list">
             {ideas.map(item => (
@@ -187,7 +187,6 @@ function Rail({ items }) {
 }
 
 export function ScheduleView() {
-  useLang()
   const items = useDesk(s => s.state.items)
   return (
     <div className="md-board-page">

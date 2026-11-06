@@ -1,13 +1,13 @@
-// 数据复盘。
+// Insights.
 import React from 'react'
 import { dispatchOps, fetchInsights, learnSkills, openItem, setDesk, toast, useDesk } from './desk.js'
 import { ConnectDialog } from './connect.jsx'
-import { lang, plural, t, useLang } from './i18n.js'
+import { plural, t } from './i18n.js'
 import { Icon, Segmented } from './ui.jsx'
 const clip = (text, n) => (text.length > n ? `${text.slice(0, n).trimEnd()}…` : text)
 import { PLATFORMS, compact, platformChoices, displayItem, fmtDate, posterOf, dayKey } from './util.js'
 
-/** 带数量的文字：英文在 1 时用单数那条 key；{s} 给共用词典里写成 piece{s} 的那种。 */
+/** Text with a count: the singular form when n is 1; {s} covers wording like piece{s}. */
 function count(n, one, other, vars = {}) {
   return t(plural(n, one, other), { n: Number(n).toLocaleString(), s: n === 1 ? '' : 's', ...vars })
 }
@@ -19,7 +19,7 @@ function niceMax(value) {
   return step * pow
 }
 
-/** 单序列折线：十字准线 + 提示框，配一份可切换的表格。 */
+/** Single-series line chart: crosshair, tooltip and a table view. */
 function TrendChart({ daily: rows, field }) {
   const daily = rows.map(row => ({ ...row, value: row[field] }))
   const [hover, setHover] = React.useState(null)
@@ -105,12 +105,12 @@ function platformOf(name) {
   return PLATFORMS.find(p => p.toLowerCase() === value)
 }
 
-/** CSV：日期,平台,阅读,点赞,评论,转发,收藏 */
+/** CSV columns: date, platform, views, likes, comments, shares, saves */
 export function parseCsv(text) {
   const ops = []
   const errors = []
   text.trim().split(/\r?\n/).forEach((line, index) => {
-    const cols = line.split(/[,，\t]/).map(c => c.trim())
+    const cols = line.split(/[,\t]/).map(c => c.trim())
     if (index === 0 && !/\d/.test(cols[0])) return
     const date = new Date(cols[0])
     const platform = platformOf(cols[1])
@@ -134,7 +134,7 @@ function importCsv() {
         const { ops, errors } = parseCsv(values.csv ?? '')
         const done = count(ops.length, 'Imported 1 row', 'Imported {n} rows')
         if (ops.length) dispatchOps(ops, { label: done, silent: true })
-        toast(errors.length ? t('Imported {n}. Skipped rows with the wrong format: {rows}', { n: ops.length, rows: errors.slice(0, 5).join(t('、')) }) : done, { error: errors.length > 0, undo: !errors.length && ops.length > 0 })
+        toast(errors.length ? t('Imported {n}. Skipped rows with the wrong format: {rows}', { n: ops.length, rows: errors.slice(0, 5).join(', ') }) : done, { error: errors.length > 0, undo: !errors.length && ops.length > 0 })
       },
     },
   })
@@ -145,7 +145,6 @@ function Metric({ label, value, unit, wide }) {
 }
 
 export function InsightsView() {
-  useLang()
   const items = useDesk(s => s.state.items)
   const metrics = useDesk(s => s.state.metrics)
   const skills = useDesk(s => s.state.skills)
@@ -159,9 +158,9 @@ export function InsightsView() {
     return () => { alive = false }
   }, [metrics, items])
   if (!data) return <div className="md-board-page"><div className="md-tile md-i-hero" /></div>
-  // 有真实数据后，不再把示例规则当建议
+  // Once there's real data, stop treating sample-derived rules as suggestions
   const proposed = skills.filter(s => s.status === 'proposed' && (data.hasSample || !s.sample))
-  // 有的平台公开接口读不到播放量，这时统一按互动来比
+  // Some platforms don't expose views publicly, so compare on engagement instead
   const hasViews = data.views > 0
   const barKey = data.platforms.every(p => p.views > 0) ? 'views' : 'engaged'
   const maxBar = Math.max(1, ...data.platforms.map(p => p[barKey]))
@@ -196,15 +195,15 @@ export function InsightsView() {
         <section className="md-tile md-i-hero">
           <div className="md-hero-copy">
             <h1 className="md-i-line">
-              <b>{count(data.published, '1 piece', '{n} piece{s}')}</b> {t('drew')} <b>{hasViews ? t(plural(data.views, '1 view', '{n} views'), { n: compact(data.views) }) : t(plural(data.engaged, '1 engagement', '{n} engagements'), { n: compact(data.engaged) })}</b>{best ? t('，') : t('。')}
-              {best ? <><br />{t('led by')} {heroPic ? <img className="md-inline-pic" src={heroPic} alt="" draggable={false} /> : null} <b>{clip(best.title, lang() === 'en' ? 30 : 14)}</b>{t('。')}</> : null}
+              <b>{count(data.published, '1 piece', '{n} piece{s}')}</b> {t('drew')} <b>{hasViews ? t(plural(data.views, '1 view', '{n} views'), { n: compact(data.views) }) : t(plural(data.engaged, '1 engagement', '{n} engagements'), { n: compact(data.engaged) })}</b>{best ? ',' : '.'}
+              {best ? <><br />{t('led by')} {heroPic ? <img className="md-inline-pic" src={heroPic} alt="" draggable={false} /> : null} <b>{clip(best.title, 30)}</b>.</> : null}
             </h1>
             {actions}
           </div>
           <dl className="md-metrics">
             {hasViews ? <Metric label={t('Engagement rate')} value={(data.engagementRate * 100).toFixed(1)} unit="%" /> : null}
             <Metric label={t('Total engagement')} value={compact(data.engaged)} />
-            {realAccounts && data.followers ? <Metric label={t('Followers')} value={compact(data.followers)} /> : <Metric label={lang() === 'en' ? t('Platforms') : 'Platform'} value={data.platforms.length} unit={t('')} />}
+            {realAccounts && data.followers ? <Metric label={t('Followers')} value={compact(data.followers)} /> : <Metric label={t('Platforms')} value={data.platforms.length} unit={t('')} />}
           </dl>
           {data.hasSample ? <span className="md-i-sample">{t('Sample data')}</span> : null}
         </section>
@@ -219,7 +218,7 @@ export function InsightsView() {
             <div className="md-i-table">
               <table className="md-table is-plain">
                 <thead><tr><th>{t('Date')}</th>{hasViews ? <th className="is-num">{t('Views')}</th> : null}<th className="is-num">{t('Engagement')}</th></tr></thead>
-                <tbody>{[...data.daily].reverse().map(d => <tr key={d.date}><td>{lang() === 'en' ? fmtDate(`${d.date}T12:00:00`) : d.date}</td>{hasViews ? <td className="is-num">{d.views.toLocaleString()}</td> : null}<td className="is-num">{d.engaged.toLocaleString()}</td></tr>)}</tbody>
+                <tbody>{[...data.daily].reverse().map(d => <tr key={d.date}><td>{fmtDate(`${d.date}T12:00:00`)}</td>{hasViews ? <td className="is-num">{d.views.toLocaleString()}</td> : null}<td className="is-num">{d.engaged.toLocaleString()}</td></tr>)}</tbody>
               </table>
             </div>
           )}

@@ -1,4 +1,4 @@
-// 灵感卡片：散落、瀑布流复用同一张卡。
+// Idea card: the scatter wall and the feed share the same card.
 import React from 'react'
 import { setDesk } from './desk.js'
 import { t } from './i18n.js'
@@ -47,7 +47,7 @@ export function Card({ item: raw, onOpen }) {
       data-card={item.id}
       tabIndex={0}
       role="button"
-      aria-label={t('{kind}：{title}', { kind: t(KIND_LABEL[item.kind]), title: item.title })}
+      aria-label={t('{kind}: {title}', { kind: t(KIND_LABEL[item.kind]), title: item.title })}
       onPointerEnter={() => setHover(true)}
       onPointerLeave={() => setHover(false)}
       onClick={event => onOpen?.(raw, event)}

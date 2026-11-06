@@ -1,15 +1,15 @@
-// 抓账号：先引导用户接好 Monid，再贴主页链接。
+// Account import: first help the user set up Monid, then paste a profile link.
 import React from 'react'
 import { importAccount, monidStatus, toast, useDesk } from './desk.js'
-import { t, useLang } from './i18n.js'
+import { t } from './i18n.js'
 import { Dialog, Icon } from './ui.jsx'
 
 const SETUP_LINE = 'set up https://monid.ai/SKILL.md'
-// 命令里的占位词要跟着语言走，用的时候再翻译
+// A shell command; the placeholder marks where the key goes.
 const KEY_COMMAND = 'monid keys add -k YOUR_KEY -l main'
 const KEYS_URL = 'https://app.monid.ai/access/api-keys'
 
-/** 花费是按 Monid 目录价估的，实际花费以导入结果为准。 */
+/** Cost is estimated from Monid's list price; the import result is the source of truth. */
 function detect(text) {
   const value = String(text ?? '')
   if (/xiaohongshu\.com|xhslink\.com/i.test(value)) return { platform: 'RedNote', estimate: '$0.02' }
@@ -107,7 +107,6 @@ function AccountForm({ status, onClose }) {
 }
 
 export function ConnectDialog({ onClose }) {
-  useLang()
   const [status, setStatus] = React.useState(null)
   const [checking, setChecking] = React.useState(true)
   const check = React.useCallback(async () => {

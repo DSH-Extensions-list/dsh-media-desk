@@ -1,4 +1,4 @@
-// 散落布局。始终基于全部根卡片计算，筛选和新增内容都不会让整面墙重新洗牌。
+// Scatter layout. Always computed from all root cards, so filtering and new ideas never reshuffle the wall.
 import { displayItem, hash, seeded } from './util.js'
 
 export const HERO = { w: 540, h: 372 }
@@ -15,7 +15,7 @@ export function cardSize(raw) {
   return { w: 232, h: 186 }
 }
 
-/** 螺旋撒点，再迭代推开重叠的卡片。中间留给首屏那句话，手动摆放过的卡片不动。 */
+/** Spiral placement, then push overlaps apart. The middle is reserved for the hero line; manually placed cards stay put. */
 export function scatterLayout(items) {
   const ordered = [...items].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || a.id.localeCompare(b.id))
   const rand = seeded(7919)

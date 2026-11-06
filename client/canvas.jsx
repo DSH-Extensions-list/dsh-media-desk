@@ -1,4 +1,4 @@
-// 首页：一句话记一个灵感。灵感可以散落在空间里，也可以按时间排成信息流。
+// Home: one line captures one idea. Ideas can scatter in space or line up as a feed by time.
 import React from 'react'
 import { Card, openCapture } from './card.jsx'
 import { captureFiles, captureUrl, dispatchOps, openItem, setDesk, useDesk } from './desk.js'
@@ -68,7 +68,7 @@ function Inline({ src }) {
   return <img className="md-inline-pic" src={src} alt="" draggable={false} />
 }
 
-/** 首屏那句话：有图、有字、有数字，下面是一句话记灵感和最近的邮票。 */
+/** The hero line: image, text, numbers, with the one-line capture box and recent stamps below. */
 function Hero() {
   const items = useDesk(s => s.state.items)
   const roots = items.filter(isIdea)
@@ -86,10 +86,10 @@ function Hero() {
     if (!value) return
     setText('')
     if (/^https?:\/\//i.test(value)) return captureUrl(value)
-    // 记下的同时，把提到同一件事的旧灵感拉到眼前
+    // While saving, pull up older ideas that mention the same thing
     const ids = relatedIdeas(roots, value)
     setDesk({ related: ids.length ? { query: value, ids, newId: null } : null })
-    await dispatchOps([{ op: 'add_item', kind: 'note', title: value.split(/[。！？\n]|[.!?](?=\s|$)/)[0].slice(0, 60), body: value.length > 60 ? value : '' }], { label: t('Add idea') })
+    await dispatchOps([{ op: 'add_item', kind: 'note', title: value.split(/[.!?](?=\s|$)|\n/)[0].slice(0, 60), body: value.length > 60 ? value : '' }], { label: t('Add idea') })
   }
   const now = new Date()
   return (
@@ -100,7 +100,7 @@ function Hero() {
         <br />
         <Inline src={pic(upcoming)} /> <b>{t('{n} piece{s}', { n: upcoming.length, s: plural(upcoming.length, '', 's') })}</b> {t('scheduled this week,')}
         <br />
-        {t('and your idea streak is')} <b className="md-hero-streak">{t('{n} day{s}', { n: streak, s: plural(streak, '', 's') })}</b>{t('。')}
+        {t('and your idea streak is')} <b className="md-hero-streak">{t('{n} day{s}', { n: streak, s: plural(streak, '', 's') })}</b>.
       </h1>
       <form className="md-hero-input" onSubmit={submit}>
         <Icon name="spark" size={16} />
@@ -172,7 +172,7 @@ function Scatter() {
   const posOf = React.useCallback((item) => {
     if (dragPos.current[item.id]) return dragPos.current[item.id]
     if (related) {
-      // 相关的围在中间那句话四周，刚记下的那条放在正上方，不被底部工具条挡住
+      // Related cards sit around the hero line; the one just saved goes directly above it, clear of the bottom toolbar
       if (item.id === related.newId) return { x: 0, y: -200 - cardSize(item).h / 2, r: 0, d: 0 }
       const spot = relatedSpots[item.id]
       if (spot) return { ...spot, r: 0, d: 0 }
@@ -181,7 +181,7 @@ function Scatter() {
     return layout[item.id] ?? { x: 0, y: 0, r: 0, d: 0 }
   }, [layout, related, relatedSpots])
 
-  // 拉出相关卡片后，镜头缩放到能把它们和中间那句话一起装下
+  // Once related cards are out, zoom so they and the hero line all fit
   React.useEffect(() => {
     if (!related) return
     const byId = new Map(roots.map(i => [i.id, i]))
@@ -219,7 +219,7 @@ function Scatter() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 新记下的灵感可能落在屏幕外：相机带过去，让人看到它去了哪里
+  // A new idea can land off-screen: bring the camera over so you can see where it went
   const known = React.useRef(null)
   React.useEffect(() => {
     const previous = known.current
@@ -360,7 +360,7 @@ function Scatter() {
     return () => el.removeEventListener('wheel', onWheel)
   }, [cam, flyTo, zoomAt])
 
-  // 键盘 Tab 到屏幕外的卡片时，相机跟过去
+  // When Tab reaches a card off-screen, follow it with the camera
   const onFocusIn = (event) => {
     const node = event.target.closest?.('[data-node]')
     if (!node || !event.target.matches(':focus-visible')) return
@@ -409,7 +409,7 @@ function Scatter() {
   )
 }
 
-/** 信息流：原来的瀑布流卡片，按时间从新到旧排。 */
+/** Feed: the original masonry cards, newest first. */
 function Feed() {
   const items = useDesk(s => s.state.items)
   const kind = useDesk(s => s.kindFilter)
@@ -418,7 +418,7 @@ function Feed() {
   const sorted = React.useMemo(() => items
     .filter(i => isIdea(i) && (kind === 'all' || displayItem(i).kind === kind))
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
-    // 有相关的灵感时排在最前面，按相关程度
+    // Related ideas come first, ordered by relevance
     .sort((a, b) => {
       const ra = rank(a.id)
       const rb = rank(b.id)
