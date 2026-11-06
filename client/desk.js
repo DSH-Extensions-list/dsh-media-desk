@@ -1,7 +1,7 @@
 // 浏览器侧的状态：Host 状态的本地镜像，加上只属于界面的选中、视图等。
 import React from 'react'
 import { coverDataUrl } from './cover.js'
-import { lang, plural, setLanguagePreference, t } from './i18n.js'
+import { lang, plural, t } from './i18n.js'
 
 const BASE = 'media-desk/'
 
@@ -52,9 +52,7 @@ export function report(err) {
 
 export async function loadDesk() {
   try {
-    // 先读设置拿到语言偏好，示例数据按这个语言返回
     const settings = await request('settings')
-    setLanguagePreference(settings.language)
     const data = await request('state')
     setDesk({ settings, state: data.state, model: data.model, modelOk: data.modelOk, modelError: data.modelError, canUndo: data.canUndo, error: null })
   } catch (err) {
@@ -147,7 +145,6 @@ export function watchProduction(id) {
 export async function saveSettings(payload) {
   try {
     const settings = await request('settings', payload)
-    setLanguagePreference(settings.language)
     setDesk({ settings })
     toast(t('Settings saved'))
     return true
@@ -160,7 +157,6 @@ export async function saveSettings(payload) {
 export async function testImage(payload) {
   try {
     const settings = await request('settings', payload)
-    setLanguagePreference(settings.language)
     setDesk({ settings })
     const { src } = await request('settings/test', {})
     return src

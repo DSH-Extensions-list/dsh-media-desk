@@ -9,7 +9,6 @@ const DEFAULTS = {
   exportDir: '',
   imageCount: 2,
   shotCount: 6,
-  language: 'auto',
 }
 
 function clamp(value, min, max, fallback) {
@@ -66,7 +65,6 @@ export class Settings {
     if (typeof patch.voice === 'string') next.voice = patch.voice.slice(0, 8000)
     if (typeof patch.exportDir === 'string') next.exportDir = patch.exportDir.trim().slice(0, 500)
     if (patch.imageCount !== undefined) next.imageCount = clamp(patch.imageCount, 0, 4, current.imageCount)
-    if (['auto', 'zh', 'en'].includes(patch.language)) next.language = patch.language
     if (patch.shotCount !== undefined) next.shotCount = clamp(patch.shotCount, 0, 12, current.shotCount)
     const tmp = `${this.file}.${process.pid}.tmp`
     await writeFile(tmp, JSON.stringify(next, null, 2), { mode: 0o600 })

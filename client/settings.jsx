@@ -14,13 +14,6 @@ const PRESETS = [
   { id: 'custom', label: 'Custom', baseUrl: '', model: '', size: '1024x1024', quality: '', extra: '' },
 ]
 
-// 中文和 English 各用自己的语言写，切错了也认得出来
-const LANGUAGES = [
-  { value: 'auto', label: () => t('Match DeepSeek Harness') },
-  { value: 'zh', label: () => '中文' },
-  { value: 'en', label: () => 'English' },
-]
-
 export function SettingsDialog() {
   useLang()
   const open = useDesk(s => s.settingsOpen)
@@ -32,14 +25,13 @@ export function SettingsDialog() {
   React.useEffect(() => {
     if (!open || !settings) return
     const { image } = settings
-    setForm({ language: settings.language ?? 'auto', baseUrl: image.baseUrl, model: image.model, apiKey: '', size: image.size, quality: image.quality, extra: image.extra, exportDir: settings.exportDir ?? '', imageCount: settings.imageCount, shotCount: settings.shotCount })
+    setForm({ baseUrl: image.baseUrl, model: image.model, apiKey: '', size: image.size, quality: image.quality, extra: image.extra, exportDir: settings.exportDir ?? '', imageCount: settings.imageCount, shotCount: settings.shotCount })
     setSample(null)
   }, [open, settings])
   if (!open || !form) return null
   const close = () => setDesk({ settingsOpen: false })
   const set = (key, value) => setForm(f => ({ ...f, [key]: value }))
   const payload = () => ({
-    language: form.language,
     image: { baseUrl: form.baseUrl, model: form.model, apiKey: form.apiKey, size: form.size, quality: form.quality, extra: form.extra },
     exportDir: form.exportDir, imageCount: Number(form.imageCount), shotCount: Number(form.shotCount),
   })
@@ -50,14 +42,6 @@ export function SettingsDialog() {
         event.preventDefault()
         if (await saveSettings(payload())) close()
       }}>
-        <div className="md-field">
-          <span>{t('Language')}</span>
-          <div className="md-presets" role="radiogroup" aria-label={t('Language')}>
-            {LANGUAGES.map(option => (
-              <button type="button" key={option.value} role="radio" aria-checked={form.language === option.value} className={form.language === option.value ? 'is-on' : ''} onClick={() => set('language', option.value)}>{option.label()}</button>
-            ))}
-          </div>
-        </div>
         <label className="md-field">
           <span>{t('Save drafts to')}</span>
           <input value={form.exportDir} onChange={e => set('exportDir', e.target.value)} placeholder={settings.defaultExportDir} />

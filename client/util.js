@@ -1,4 +1,3 @@
-import { EN } from './en/index.js'
 import { lang, t } from './i18n.js'
 
 // 这些表只放中文原文，显示时再用 t() 翻译
@@ -116,9 +115,8 @@ export function compact(n) {
   return n.toLocaleString()
 }
 
-/** 数量后面的单位。英文在 n 为 1 时用单数，词典里 key 写成「单位|1」。 */
+/** The unit that follows a count. */
 export function unit(n, zh) {
-  if (lang() === 'en' && n === 1 && EN[`${zh}|1`] !== undefined) return EN[`${zh}|1`]
   return t(zh)
 }
 
@@ -209,4 +207,3 @@ export function textLength(text) {
   if (lang() !== 'en') return text.replace(/\s/g, '').length
   return (text.match(/[\u4e00-\u9fff]|[A-Za-z0-9][A-Za-z0-9'’-]*/g) || []).length
 }
-

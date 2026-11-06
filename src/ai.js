@@ -2,7 +2,7 @@
 // 模型不可用时一律显式降级：engine 字段告诉界面这次结果来自哪里。
 import { STATUS_LABEL, statusLabel } from './ops.js'
 import { activeStyle, styleToVoice } from './style.js'
-import { byLang, currentLang, ENGLISH_DIRECTIVE, tr } from './i18n.js'
+import { byLang, tr } from './i18n.js'
 
 /** 最近一次模型调用的结果。选了模型不等于能用，比如还没配密钥。 */
 export const modelStatus = { ok: null, error: null }
@@ -39,7 +39,7 @@ export async function callModel(ctx, { system, user, maxTokens = 4000, signal, o
     let text = ''
     for await (const chunk of call.stream({
       ...call.config,
-      system: currentLang() === 'en' ? `${system}\n${ENGLISH_DIRECTIVE}` : system,
+      system,
       messages: [{ role: 'user', content: [{ type: 'text', text: user }], source: { kind: 'dsh-media-desk' } }],
       signal,
     })) {

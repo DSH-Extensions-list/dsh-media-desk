@@ -2,7 +2,6 @@
 import React from 'react'
 import { dispatchOps, fetchInsights, learnSkills, openItem, setDesk, toast, useDesk } from './desk.js'
 import { ConnectDialog } from './connect.jsx'
-import { EN } from './en/index.js'
 import { lang, plural, t, useLang } from './i18n.js'
 import { Icon, Segmented } from './ui.jsx'
 const clip = (text, n) => (text.length > n ? `${text.slice(0, n).trimEnd()}…` : text)
@@ -100,10 +99,10 @@ function addMetric(items) {
   })
 }
 
-/** 平台名：中文原文，或者它的英文名（不分大小写）。 */
+/** Platform name, matched case-insensitively. */
 function platformOf(name) {
   const value = String(name ?? '').toLowerCase()
-  return PLATFORMS.find(p => p.toLowerCase() === value || String(EN[p] ?? '').toLowerCase() === value)
+  return PLATFORMS.find(p => p.toLowerCase() === value)
 }
 
 /** CSV：日期,平台,阅读,点赞,评论,转发,收藏 */
