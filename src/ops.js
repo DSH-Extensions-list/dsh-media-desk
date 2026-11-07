@@ -1,6 +1,7 @@
 // The workbench's single write path: chat and UI actions both go through it, so
 // fields are validated and receipts produced in one place.
 // Model output is untrusted input too, so only whitelisted fields get through.
+import { DRAFT_FORMATS, DRAFT_IDENTITIES } from './draft-brief.js'
 import { tr } from './i18n.js'
 
 export const STATUSES = ['idea', 'outline', 'draft', 'ready', 'published']
@@ -14,6 +15,7 @@ export function statusLabel(status) {
 }
 
 const ITEM_FIELDS = {
+  draftIdentity: 'draftIdentity', draftFormat: 'draftFormat', draftBrand: 'shortText', draftStyleId: 'id',
   title: 'text', body: 'text', kind: 'kind', url: 'url', source: 'text', tags: 'list', status: 'status', angleId: 'id',
   personaIds: 'list', parentId: 'id', rel: 'text', scheduledAt: 'date', platform: 'platform', pinned: 'bool', media: 'media', pos: 'pos', score: 'num',
 }
@@ -41,6 +43,9 @@ function isHttpUrl(value) {
 
 function coerce(type, value) {
   switch (type) {
+    case 'draftIdentity': return DRAFT_IDENTITIES.includes(value) ? value : undefined
+    case 'draftFormat': return DRAFT_FORMATS.includes(value) ? value : undefined
+    case 'shortText': return typeof value === 'string' ? value.trim().slice(0, 100) : undefined
     case 'text': return typeof value === 'string' ? value.slice(0, 40000) : undefined
     case 'id': return value === null || typeof value === 'string' ? value : undefined
     case 'kind': return KINDS.includes(value) ? value : undefined

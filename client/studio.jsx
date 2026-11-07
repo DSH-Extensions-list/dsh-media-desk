@@ -1,3 +1,4 @@
+import { draftFormat } from '../src/draft-brief.js'
 // The workspace behind an idea: chat on the left, a sheet on the right. The sheet's tiles are laid out up front and fill in as the work lands.
 import React from 'react'
 import { ChatPanel } from './chat.jsx'
@@ -5,7 +6,7 @@ import { downloadCover } from './cover.js'
 import { cancelProduce, closeItem, dispatchOps, regenAsset, revealSaved, runProduce, saveProduced, setDesk, toast, useDesk, watchProduction } from './desk.js'
 import { plural, t } from './i18n.js'
 import { Icon, IconButton } from './ui.jsx'
-import { SPRING_SNAP, SPRING_SOFT, STYLE_CATEGORIES, fmtDate, fmtWhen, reducedMotion, renderMarkdown, styleIcon, textLength, toLocalInput } from './util.js'
+import { SPRING_SNAP, SPRING_SOFT, fmtDate, fmtWhen, reducedMotion, renderMarkdown, styleIcon, textLength, toLocalInput } from './util.js'
 
 const isBusy = asset => ['pending', 'running'].includes(asset?.status)
 
@@ -17,7 +18,7 @@ function unescapeJson(text) {
   }
 }
 
-function AutoText({ value, onCommit, className, label, disabled }) {
+function AutoText({ value, onCommit, className, label, disabled, placeholder }) {
   const [draft, setDraft] = React.useState(value ?? '')
   const ref = React.useRef(null)
   React.useEffect(() => setDraft(value ?? ''), [value])
@@ -28,7 +29,7 @@ function AutoText({ value, onCommit, className, label, disabled }) {
     el.style.height = `${el.scrollHeight}px`
   }, [draft])
   return (
-    <textarea ref={ref} rows={1} aria-label={label} className={className} value={draft} disabled={disabled}
+    <textarea ref={ref} rows={1} aria-label={label} placeholder={placeholder} className={className} value={draft} disabled={disabled}
       onChange={e => setDraft(e.target.value)} onBlur={() => { if (draft.trim() && draft !== (value ?? '')) onCommit(draft) }} />
   )
 }
@@ -54,7 +55,8 @@ function Plate({ asset, paper = false, mark = null, alt = '', onOpen, onRetry })
 /** Progress, inside the chat panel: reads like the assistant reporting back. */
 function ProgressCard({ production, live, settings }) {
   const running = production.status === 'running'
-  const ready = settings?.imageReady
+  const video = (production.format ?? 'video') === 'video'
+  const ready = settings?.imageReady && production.format !== 'post'
   const words = textLength(production.article || live?.text || '')
   const visuals = [production.cover, ...(production.images ?? [])].filter(Boolean)
   const shots = production.shots ?? []
@@ -62,10 +64,10 @@ function ProgressCard({ production, live, settings }) {
   const planned = production.stage !== 'brief'
   const steps = [
     { label: t('Title and cover text'), done: planned, active: !planned },
-    { label: production.article ? t('Script · {n} word{s}', { n: words, s: plural(words, '', 's') }) : words ? t('Writing · {n} word{s}', { n: words, s: plural(words, '', 's') }) : t('Script'), done: Boolean(production.article), active: planned && !production.article },
+    { label: production.article ? t(video ? 'Script · {n} word{s}' : 'Post · {n} word{s}', { n: words, s: plural(words, '', 's') }) : words ? t('Writing · {n} word{s}', { n: words, s: plural(words, '', 's') }) : t(video ? 'Script' : 'Post copy'), done: Boolean(production.article), active: planned && !production.article },
     ...(ready ? [
       { label: t('Cover and images {done}/{total}', { done: count(visuals), total: visuals.length || 1 + (settings?.imageCount ?? 2) }), done: planned && visuals.length > 0 && !visuals.some(isBusy), active: visuals.some(isBusy) },
-      { label: t('Storyboard {done}/{total}', { done: count(shots), total: shots.length || settings?.shotCount || 6 }), done: planned && shots.length > 0 && !shots.some(isBusy), active: shots.some(isBusy) },
+      ...(video ? [{ label: t('Storyboard {done}/{total}', { done: count(shots), total: shots.length || settings?.shotCount || 6 }), done: planned && shots.length > 0 && !shots.some(isBusy), active: shots.some(isBusy) }] : []),
     ] : []),
   ]
   return (
@@ -81,30 +83,104 @@ function ProgressCard({ production, live, settings }) {
   )
 }
 
-/** Top of the chat panel: this idea, and the one way in. */
+function StylePicker({ styles, value, onChange, disabled }) {
+  const [open, setOpen] = React.useState(false)
+  const [query, setQuery] = React.useState('')
+  const selected = styles.find(style => style.id === value)
+  const search = query.trim().toLowerCase()
+  const groups = [
+    [t('Saved styles'), styles.filter(style => !style.preset)],
+    [t('Presets'), styles.filter(style => style.preset)],
+  ]
+  const choose = id => { onChange(id); setOpen(false) }
+  return (
+    <div className="md-brief-field" onKeyDown={event => {
+      if (event.key === 'Escape' && open) {
+        event.preventDefault()
+        event.stopPropagation()
+        setOpen(false)
+        event.currentTarget.querySelector('.md-style-trigger')?.focus()
+      }
+    }}>
+      <span>{t('Writing style')}</span>
+      <button type="button" className="md-style-trigger" aria-label={t('Writing style')} aria-expanded={open} disabled={disabled} onClick={() => { setQuery(''); setOpen(!open) }}>
+        <span>{selected ? `${styleIcon(selected)} ${selected.name}` : t('Neutral')}</span><Icon name={open ? 'chevU' : 'chevD'} size={13} />
+      </button>
+      {open ? (
+        <div className="md-style-options">
+          <input aria-label={t('Search styles')} placeholder={t('Search styles')} value={query} autoFocus onChange={event => setQuery(event.target.value)} />
+          <div className="md-style-results">
+            {!search ? <button type="button" aria-pressed={!selected} onClick={() => choose(null)}>{t('Neutral')}</button> : null}
+            {groups.map(([label, rows]) => {
+              const matches = rows.filter(style => `${style.name} ${style.category ?? ''}`.toLowerCase().includes(search))
+              return matches.length ? (
+                <div key={label} role="group" aria-label={label}>
+                  <strong>{label}</strong>
+                  {matches.map(style => <button key={style.id} type="button" aria-pressed={style.id === value} onClick={() => choose(style.id)}>
+                    <span aria-hidden="true">{styleIcon(style)}</span> {style.name}
+                  </button>)}
+                </div>
+              ) : null
+            })}
+            {search && !styles.some(style => `${style.name} ${style.category ?? ''}`.toLowerCase().includes(search)) ? <p className="md-muted">{t('No matching styles')}</p> : null}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+const FORMAT_OPTIONS = [['post', 'Post'], ['graphic', 'Post + image'], ['video', 'Video']]
+
 function IdeaCard({ item, live, settings }) {
   const production = item.production
   const running = production?.status === 'running'
   const styles = useDesk(s => s.state.styles ?? [])
   const activeId = useDesk(s => s.state.activeStyleId)
+  const lastBrand = useDesk(s => s.state.items.find(row => row.draftBrand)?.draftBrand)
+  const [saving, setSaving] = React.useState(false)
+  const format = draftFormat(item)
+  const update = async fields => {
+    setSaving(true)
+    try { return await dispatchOps([{ op: 'update_item', id: item.id, ...fields }], { label: t('Update draft brief'), silent: true }) }
+    finally { setSaving(false) }
+  }
   return (
     <div className="md-idea-card">
       <span className="md-idea-label">{t('Idea')} · {fmtDate(item.createdAt)}</span>
       <AutoText className="md-idea-text" label={t('Idea')} value={item.title} disabled={running} onCommit={title => dispatchOps([{ op: 'update_item', id: item.id, title }], { label: t('Edit idea'), silent: true })} />
       {!running ? (
-        <label className="md-style-pick">
-          <span>{t('Style')}</span>
-          <select aria-label={t('Style')} value={activeId ?? ''} onChange={e => dispatchOps([{ op: 'set_style', id: e.target.value || null }], { label: t('Switch style'), silent: true })}>
-            <option value="">{t('Default')}</option>
-            {styles.some(style => !style.preset) ? <optgroup label={t('My styles')}>{styles.filter(style => !style.preset).map(style => <option key={style.id} value={style.id}>{styleIcon(style)} {style.name}</option>)}</optgroup> : null}
-            {STYLE_CATEGORIES.map(name => <optgroup key={name} label={t(name)}>{styles.filter(style => style.preset && style.category === name).map(style => <option key={style.id} value={style.id}>{styleIcon(style)} {style.name}</option>)}</optgroup>)}
-          </select>
-        </label>
+        <div className="md-publishing-brief">
+          <div className="md-brief-field">
+            <span>{t('Publish as')}</span>
+            <div className="md-brief-options" role="group" aria-label={t('Publish as')}>
+              {['personal', 'brand'].map(id => <button key={id} type="button" disabled={saving} aria-pressed={(item.draftIdentity ?? 'personal') === id} onClick={() => update({
+                draftIdentity: id, draftFormat: item.draftFormat ?? 'post', draftStyleId: item.draftStyleId ?? null,
+                ...(id === 'brand' && !item.draftBrand && lastBrand ? { draftBrand: lastBrand } : {}),
+              })}>{t(id === 'personal' ? 'Personal' : 'Brand')}</button>)}
+            </div>
+          </div>
+          {item.draftIdentity === 'brand' ? (
+            <div className="md-brief-field">
+              <span>{t('Brand name')}</span>
+              <AutoText className="md-brand-name" label={t('Brand name')} placeholder={t('Enter the brand name')} value={item.draftBrand ?? ''} onCommit={draftBrand => update({ draftBrand })} />
+            </div>
+          ) : null}
+          <div className="md-brief-field">
+            <span>{t('Format')}</span>
+            <div className="md-brief-options" role="group" aria-label={t('Format')}>
+              {FORMAT_OPTIONS.map(([id, label]) => <button key={id} type="button" disabled={saving} aria-pressed={format === id} onClick={() => update({
+                draftFormat: id, draftIdentity: item.draftIdentity ?? 'personal', draftStyleId: item.draftStyleId ?? null,
+              })}>{t(label)}</button>)}
+            </div>
+          </div>
+          <StylePicker styles={styles} disabled={saving} value={item.draftStyleId === undefined && !item.draftIdentity ? activeId : item.draftStyleId} onChange={draftStyleId => update({ draftStyleId })} />
+        </div>
       ) : null}
-      {!production || !['running', 'done'].includes(production.status) ? <button type="button" className="md-go" onClick={() => runProduce(item.id)}>{t('Draft it')}</button> : null}
+      {!production || !['running', 'done'].includes(production.status) ? <button type="button" className="md-go" disabled={saving || (item.draftIdentity === 'brand' && !item.draftBrand?.trim())} onClick={() => runProduce(item.id)}>{t('Draft it')}</button> : null}
       {running ? <ProgressCard production={{ ...production, id: item.id }} live={live} settings={settings} /> : null}
+      {!running && format !== 'post' && !settings?.imageReady ? <p className="md-idea-hint">{t('Connect an image model to generate visuals.')}<button type="button" onClick={() => setDesk({ settingsOpen: true })}>{t('Set up')}</button></p> : null}
       {production?.status === 'failed' ? <p className="md-idea-hint is-error">{production.error}</p> : null}
-      {!running && !settings?.imageReady ? <p className="md-idea-hint">{t('Connect an image model to generate the cover and storyboard too.')}<button type="button" onClick={() => setDesk({ settingsOpen: true })}>{t('Set up')}</button></p> : null}
       {production?.notice ? <p className="md-idea-hint">{production.notice}</p> : null}
     </div>
   )
@@ -141,11 +217,12 @@ function HeroTile({ item, live, onView }) {
   const images = production?.images ?? []
   const done = production?.status === 'done'
   const pictures = [production?.cover, ...images].filter(a => a?.src).length
-  const showFigures = settings?.imageReady || images.some(a => a?.src)
+  const format = production ? production.format ?? 'video' : draftFormat(item)
+  const showFigures = format === 'video' && (settings?.imageReady || images.some(a => a?.src))
   const [saving, setSaving] = React.useState(false)
   const copy = async () => {
     await navigator.clipboard.writeText(`# ${production.title}\n\n${production.article}`)
-    toast(t('Script copied'))
+    toast(t(format === 'video' ? 'Script copied' : 'Post copied'))
   }
   const save = async () => {
     setSaving(true)
@@ -173,9 +250,9 @@ function HeroTile({ item, live, onView }) {
         </div>
         {done ? (
           <div className="md-hero-actions">
-            <button type="button" className="md-pill is-primary" onClick={copy}><Icon name="copy" size={14} />{t('Copy script')}</button>
+            <button type="button" className="md-pill is-primary" onClick={copy}><Icon name="copy" size={14} />{t(format === 'video' ? 'Copy script' : 'Copy post')}</button>
             <button type="button" className="md-pill" onClick={save} disabled={saving}><Icon name="save" size={14} />{saving ? t('Saving…') : t('Save')}</button>
-            <button type="button" className="md-pill" onClick={() => downloadCover({ src: production.cover?.src, text: production.coverText || production.title }, production.title).catch(err => toast(err.message, { error: true }))}><Icon name="image" size={14} />{t('Download cover')}</button>
+            {format !== 'post' ? <button type="button" className="md-pill" onClick={() => downloadCover({ src: production.cover?.src, text: production.coverText || production.title }, production.title).catch(err => toast(err.message, { error: true }))}><Icon name="image" size={14} />{t('Download cover')}</button> : null}
             <label className="md-pill md-date-pill">
               <Icon name="calendar" size={14} />{item.scheduledAt ? fmtWhen(item.scheduledAt) : t('Schedule')}
               <input type="datetime-local" aria-label={t('Schedule')} value={toLocalInput(item.scheduledAt)} onClick={(event) => { try { event.currentTarget.showPicker() } catch { /* fall back to the native picker */ } }} onChange={(event) => {
@@ -186,10 +263,10 @@ function HeroTile({ item, live, onView }) {
           </div>
         ) : null}
       </div>
-      <div className="md-collage">
+      {format !== 'post' ? <div className="md-collage">
         <div className="md-collage-main"><Poster production={production} item={item} onOpen={() => onView('cover')} onRetry={settings?.imageReady && production?.status === 'done' && production.cover ? () => regenAsset(item.id, 'cover') : undefined} /></div>
         {showFigures ? figures.map((image, i) => <div key={i} className={`md-collage-side is-${i}`}><Plate asset={image} alt={image?.caption ?? t('Image {n}', { n: i + 1 })} onOpen={image?.src ? () => onView(`image:${i}`) : undefined} onRetry={image && settings?.imageReady && production?.status === 'done' ? () => regenAsset(item.id, `image:${i}`) : undefined} /></div>) : null}
-      </div>
+      </div> : null}
       <div className="md-hero-corner">
         {production?.savedAt ? <IconButton icon="folder" label={t('Show in folder')} onClick={() => revealSaved(item.id)} /> : null}
         {done ? <IconButton icon="refresh" label={t('Redraft')} onClick={again} /> : null}
@@ -275,15 +352,16 @@ function ArticleTile({ item, live, open, onToggle, onView, tileRef }) {
     setPicked({ text: value, x: Math.max(70, Math.min(rect.left - box.left + rect.width / 2, box.width - 70)), y: rect.top - box.top })
   }
   const words = textLength(text)
+  const post = (production?.format ?? draftFormat(item)) !== 'video'
   return (
     <>
       <header className="md-tile-head">
-        <h2>{t('Script')}</h2>
+        <h2>{t(post ? 'Post copy' : 'Script')}</h2>
         <span className="md-grow" />
         {article ? (
           <>
             {editing ? <button type="button" className="md-btn is-small" onClick={save}><Icon name="check" size={13} />{t('Done')}</button> : <IconButton icon="edit" label={t('Edit')} onClick={() => setEditing(true)} />}
-            <IconButton icon="copy" label={t('Copy script')} onClick={copy} />
+            <IconButton icon="copy" label={t(post ? 'Copy post' : 'Copy script')} onClick={copy} />
             <IconButton icon={open ? 'close' : 'expand'} label={open ? t('Collapse') : t('Expand')} onClick={onToggle} />
           </>
         ) : null}
@@ -462,16 +540,17 @@ function Sheet({ item, live }) {
     },
     className: `md-tile md-tile-${name} ${open === name ? 'is-open' : ''}`,
   })
+  const format = item.production ? item.production.format ?? 'video' : draftFormat(item)
   return (
     <div className="md-sheet">
-      <div className={`md-bento ${open ? 'has-open' : ''}`} ref={bento}>
+      <div className={`md-bento md-draft-${format} ${open ? 'has-open' : ''}`} ref={bento}>
         <HeroTile item={item} live={live} onView={setViewing} />
         <section {...tile('article')}>
           <ArticleTile item={item} live={live} open={open === 'article'} onToggle={() => toggle('article')} onView={setViewing} tileRef={articleRef} />
         </section>
-        <section {...tile('shots')}>
+        {format === 'video' ? <section {...tile('shots')}>
           <ShotsTile item={item} live={live} count={settings?.shotCount ?? 6} open={open === 'shots'} onToggle={() => toggle('shots')} onView={setViewing} />
-        </section>
+        </section> : null}
       </div>
       {viewing ? <Viewer item={item} target={viewing} onChange={setViewing} onClose={() => setViewing(null)} /> : null}
     </div>
@@ -536,7 +615,7 @@ export function Studio() {
               <h2>{t('Studio')}</h2>
             </>
           )}
-          top={<IdeaCard item={item} live={live} settings={settings} />}
+          top={<IdeaCard key={item.id} item={item} live={live} settings={settings} />}
           suggestions={production?.status === 'done' ? DONE_SUGGESTIONS.map(row => t(row)) : []}
           placeholder={running ? t('Drafting… almost there') : production?.status === 'done' ? t('Tell me what to change') : t('Add a thought or say what you want')}
           disabled={running}

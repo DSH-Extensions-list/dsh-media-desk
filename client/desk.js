@@ -202,7 +202,7 @@ export async function saveProduced(id) {
   try {
     const production = snapshot.state.items.find(row => row.id === id)?.production
     // The video cover is composited in the browser and saved with the folder
-    const videoCover = await coverDataUrl({ src: production.cover?.src, text: production.coverText || production.title }).catch(() => undefined)
+    const videoCover = (production.format ?? 'video') === 'video' ? await coverDataUrl({ src: production.cover?.src, text: production.coverText || production.title }).catch(() => undefined) : undefined
     const data = await request('produce/save', { id, videoCover })
     setDesk({ state: data.state })
     toast(t('Saved to {path}', { path: data.path }))

@@ -2,6 +2,7 @@
 // The job runs in the Host, so closing the page doesn't stop it, and every generated image is written to disk once.
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { draftFormat, productionSettings } from './draft-brief.js'
 import { articlePrompts, extractJson, fallbackArticle, fallbackPlan, planPrompts, shortCoverText } from './ai.js'
 import { tr } from './i18n.js'
 import { coverPrompt, figurePrompt, shotPrompt } from './images.js'
@@ -179,11 +180,13 @@ export class Producer {
     const state = await this.store.read()
     const item = state.items.find(row => row.id === id)
     if (!item) throw Object.assign(new Error(tr('Can\'t find this idea')), { status: 404 })
+    if (item.draftIdentity === 'brand' && !item.draftBrand?.trim()) throw Object.assign(new Error(tr('Enter the brand name before drafting.')), { status: 400 })
+    if (this.jobs.has(id)) return false
     const job = { stage: 'brief', text: '', planText: '', controller: new AbortController() }
     this.jobs.set(id, job)
     await this.store.mutate('Start drafting', (draft) => {
       const target = draft.items.find(row => row.id === id)
-      target.production = { status: 'running', stage: 'brief', startedAt: new Date().toISOString(), title: target.title, article: '', cover: null, images: [], shots: [] }
+      target.production = { status: 'running', stage: 'brief', startedAt: new Date().toISOString(), title: target.title, format: draftFormat(target), article: '', cover: null, images: [], shots: [] }
       return draft
     }, { undoable: false })
     // Don't await: the browser polls for progress
@@ -198,9 +201,10 @@ export class Producer {
   async run(id, job) {
     const { signal } = job.controller
     try {
-      const settings = await this.settings.read()
       const state = await this.store.read()
       const item = state.items.find(row => row.id === id)
+      const settings = productionSettings(await this.settings.read(), item)
+      const needsVisuals = draftFormat(item) !== 'post'
       const snapshot = JSON.parse(JSON.stringify(state))
 
       signal.throwIfAborted()
@@ -219,7 +223,7 @@ export class Producer {
       if (plan.images.length < settings.imageCount) plan.images = [...plan.images, ...backup.images.slice(plan.images.length)]
       if (plan.shots.length < settings.shotCount) plan.shots = [...plan.shots, ...backup.shots.slice(plan.shots.length).map((row, i) => ({ ...row, no: plan.shots.length + i + 1 }))]
 
-      const ready = imageReady(settings)
+      const ready = needsVisuals && imageReady(settings)
       const initial = ready ? 'pending' : 'skipped'
       job.stage = 'making'
       await this.patch(id, (production) => {
@@ -229,10 +233,10 @@ export class Producer {
         production.facts = plan.facts
         production.outline = plan.outline
         production.characters = plan.characters
-        production.cover = { prompt: plan.cover, status: initial }
+        production.cover = needsVisuals ? { prompt: plan.cover, status: initial } : null
         production.images = plan.images.map(row => ({ ...row, status: initial }))
         production.shots = plan.shots.map(row => ({ ...row, status: initial }))
-        if (!ready) production.needsProvider = true
+        if (needsVisuals && !ready) production.needsProvider = true
       })
 
       // Once the plan is settled, the article and all the visuals start together

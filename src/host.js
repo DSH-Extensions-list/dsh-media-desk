@@ -13,6 +13,7 @@ import { computeInsights, exportSkill, proposeRules } from './learn.js'
 import { fetchInstagram, fetchPublicX, importPosts, postsToMaterial, saveCovers } from './social.js'
 import { Connections } from './connections.js'
 import { applyOps, newId } from './ops.js'
+import { canDraftFromChat } from './draft-brief.js'
 import { applyRevision, Producer } from './produce.js'
 import { fetchRedditFeed } from './reddit.js'
 import { resolveAccount } from './source-links.js'
@@ -153,10 +154,12 @@ async function chatTurn(ctx, store, desk, body) {
     const { receipts, errors, targets, done } = changed
     const at = new Date().toISOString()
     const itemId = focusId ?? undefined
-    // A finished draft isn't rebuilt from one message; that's what Redraft is for
-    const actions = (Array.isArray(plan.actions) ? plan.actions : [])
+    const proposed = (Array.isArray(plan.actions) ? plan.actions : [])
       .filter(a => a && ['produce', 'open', 'nav'].includes(a.type))
-      .filter(a => !(a.type === 'produce' && (done && a.id === focusId || draft.items.find(row => row.id === a.id)?.production?.status === 'done')))
+    const actions = proposed.filter(a => a.type !== 'produce' || canDraftFromChat(draft.items.find(row => row.id === a.id), message, focusId))
+    if (actions.length < proposed.length && !done) {
+      plan.reply = tr('Open the idea you want to draft, or name it by title here.')
+    }
     draft.chat.push({ id: newId('c'), at, role: 'user', text: message, itemId })
     const answer = { id: newId('c'), at, role: 'assistant', text: plan.reply, receipts, errors, engine, notice, undoable: receipts.length > 0, itemId }
     draft.chat.push(answer)

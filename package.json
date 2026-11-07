@@ -1,6 +1,6 @@
 {
   "name": "dsh-media-desk",
-  "version": "3.1.2",
+  "version": "3.2.0",
   "description": "A DeepSeek Harness plugin for Instagram, X and Reddit. Capture an idea in one line, then draft the spoken script, title, video cover, images and storyboard in one click.",
   "type": "module",
   "main": "src/host.js",

@@ -152,13 +152,13 @@ Requires DeepSeek Harness `0.2.1-rc.5` or later in the `0.2.x` line. Tested on `
 **1. Install.** Copy this release URL into **Plugins → Add plugin** in DeepSeek Harness.
 
 ```text
-https://github.com/DSH-Extensions-list/dsh-media-desk/releases/download/v3.1.2/dsh-media-desk-3.1.2.tgz
+https://github.com/DSH-Extensions-list/dsh-media-desk/releases/download/v3.2.0/dsh-media-desk-3.2.0.tgz
 ```
 
 You can also download the archive and enter its absolute `file:` path in the same dialog. For a self-managed web profile, install it from the directory where you downloaded the archive and restart `dsh web`.
 
 ```bash
-dsh plugin --profile web add "file:$PWD/dsh-media-desk-3.1.2.tgz"
+dsh plugin --profile web add "file:$PWD/dsh-media-desk-3.2.0.tgz"
 ```
 
 **2. Update.** Install the archive for the newer version from [Releases](https://github.com/DSH-Extensions-list/dsh-media-desk/releases).
@@ -183,6 +183,10 @@ The plugin is free and ships with no API keys. Anything that uses a model runs o
 Images work with any service compatible with the OpenAI Images API (`POST {endpoint}/images/generations`). GPT Image 2.6 Sunburst and Flare are available as OpenAI presets. They require an OpenAI API key and API billing. xAI, Volcengine Ark, Zhipu, SiliconFlow and custom endpoints are also supported. Click **Generate test image** to check that it works. Each draft makes 9 images by default, and you can change that. With a GPT Image 2.6 preset, choose **Animated GIF** in Settings to generate looping covers, figures and storyboard frames. Set 2–16 frames and the duration per frame. Draft exports include the original GIFs alongside any composited still video cover. Your key is stored only in the local `settings.json` (file mode 600). It never goes into your content data and is never sent to the text model.
 
 <br>
+
+## Draft for a brand or yourself
+
+Open an idea in Studio and choose **Publish as**. Select **Brand** and enter the name, or select **Personal** for your own voice. Choose **Post**, **Post + image**, or **Video**, then pick a writing style or leave it neutral. Studio saves the brief on the idea. Chat can draft the open idea or one you name by title.
 
 ## Import your own account
 
