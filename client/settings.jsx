@@ -25,14 +25,16 @@ export function SettingsDialog() {
   React.useEffect(() => {
     if (!open || !settings) return
     const { image } = settings
-    setForm({ baseUrl: image.baseUrl, model: image.model, apiKey: '', size: image.size, quality: image.quality, extra: image.extra, exportDir: settings.exportDir ?? '', imageCount: settings.imageCount, shotCount: settings.shotCount })
+    setForm({ baseUrl: image.baseUrl, model: image.model, apiKey: '', size: image.size, quality: image.quality, extra: image.extra, outputFormat: image.outputFormat ?? 'image', frameCount: image.frameCount ?? 9, frameDurationMs: image.frameDurationMs ?? 200, exportDir: settings.exportDir ?? '', imageCount: settings.imageCount, shotCount: settings.shotCount })
     setSample(null)
   }, [open, settings])
   if (!open || !form) return null
   const close = () => setDesk({ settingsOpen: false })
   const set = (key, value) => setForm(f => ({ ...f, [key]: value }))
+  const supportsGif = /^gpt-image-2\.6-(?:sunburst|flare)(?:-|$)/i.test(form.model)
+  const animated = supportsGif && form.outputFormat === 'gif'
   const payload = () => ({
-    image: { baseUrl: form.baseUrl, model: form.model, apiKey: form.apiKey, size: form.size, quality: form.quality, extra: form.extra },
+    image: { baseUrl: form.baseUrl, model: form.model, apiKey: form.apiKey, size: form.size, quality: form.quality, extra: form.extra, outputFormat: animated ? 'gif' : 'image', frameCount: Number(form.frameCount), frameDurationMs: Number(form.frameDurationMs) },
     exportDir: form.exportDir, imageCount: Number(form.imageCount), shotCount: Number(form.shotCount),
   })
   const activePreset = PRESETS.find(p => p.baseUrl && p.baseUrl === form.baseUrl && (!p.model || p.model === form.model))?.id ?? (form.baseUrl ? 'custom' : null)
@@ -69,6 +71,24 @@ export function SettingsDialog() {
           <input type="password" autoComplete="off" value={form.apiKey} onChange={e => set('apiKey', e.target.value)} placeholder={settings.image.hasKey && settings.image.baseUrl === form.baseUrl ? t('Leave blank to keep the current key') : 'sk-…'} />
           <small>{t('Stored only on this computer. Never saved with your content, bundled, or sent to the model.')}</small>
         </label>
+        {supportsGif ? (
+          <label className="md-field">
+            <span>{t('Output format')}</span>
+            <select value={form.outputFormat} onChange={e => set('outputFormat', e.target.value)}>
+              <option value="image">{t('Still image')}</option>
+              <option value="gif">{t('Animated GIF')}</option>
+            </select>
+          </label>
+        ) : null}
+        {animated ? (
+          <>
+            <div className="md-field-row">
+              <label className="md-field"><span>{t('GIF frames')}</span><input type="number" min="2" max="16" value={form.frameCount} onChange={e => set('frameCount', e.target.value)} /></label>
+              <label className="md-field"><span>{t('Milliseconds per frame')}</span><input type="number" min="20" max="2000" step="10" value={form.frameDurationMs} onChange={e => set('frameDurationMs', e.target.value)} /></label>
+            </div>
+            <small className="md-muted">{t('The model chooses the GIF dimensions. The original GIF animates in previews and is included in exports.')}</small>
+          </>
+        ) : null}
         <div className="md-field-row">
           <label className="md-field"><span>{t('Images')}</span><input type="number" min="0" max="4" value={form.imageCount} onChange={e => set('imageCount', e.target.value)} /></label>
           <label className="md-field"><span>{t('Storyboard frames')}</span><input type="number" min="0" max="12" value={form.shotCount} onChange={e => set('shotCount', e.target.value)} /></label>
@@ -77,7 +97,7 @@ export function SettingsDialog() {
         {advanced ? (
           <>
             <div className="md-field-row">
-              <label className="md-field"><span>{t('Size')}</span><input value={form.size} onChange={e => set('size', e.target.value)} placeholder="1536x1024" /></label>
+              <label className="md-field"><span>{t('Size')}</span><input value={animated ? 'auto' : form.size} disabled={animated} onChange={e => set('size', e.target.value)} placeholder="1536x1024" /></label>
               <label className="md-field"><span>{t('Quality')}</span><input value={form.quality} onChange={e => set('quality', e.target.value)} placeholder="low / medium / high" /></label>
             </div>
             <label className="md-field">
@@ -86,14 +106,14 @@ export function SettingsDialog() {
             </label>
           </>
         ) : null}
-        {sample ? <img className="md-test-sample" src={sample} alt={t('Test image')} /> : null}
+        {sample ? <img className="md-test-sample" src={sample} alt={t(animated ? 'Test GIF' : 'Test image')} /> : null}
         <div className="md-form-foot">
           <button type="button" className="md-btn" disabled={testing} onClick={async () => {
             setTesting(true)
             setSample(null)
             setSample(await testImage(payload()))
             setTesting(false)
-          }}>{testing ? <span className="md-shimmer">{t('Generating…')}</span> : t('Generate test image')}</button>
+          }}>{testing ? <span className="md-shimmer">{t('Generating…')}</span> : t(animated ? 'Generate test GIF' : 'Generate test image')}</button>
           <span style={{ flex: 1 }} />
           <button type="button" className="md-btn" onClick={close}>{t('Cancel')}</button>
           <button type="submit" className="md-btn is-primary">{t('Save')}</button>

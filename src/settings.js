@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { tr } from './i18n.js'
 
 const DEFAULTS = {
-  image: { baseUrl: '', model: '', apiKey: '', size: '1536x1024', quality: '', extra: '' },
+  image: { baseUrl: '', model: '', apiKey: '', size: '1536x1024', quality: '', extra: '', outputFormat: 'image', frameCount: 9, frameDurationMs: 200 },
   voice: '',
   exportDir: '',
   imageCount: 2,
@@ -38,7 +38,7 @@ export class Settings {
     return this.value
   }
 
-  /** An empty key means "leave it alone"; only clearKey removes it. */
+  /** An empty key keeps the saved key for the same endpoint. */
   async update(patch) {
     const current = await this.read()
     const next = structuredClone(current)
@@ -64,6 +64,11 @@ export class Settings {
         if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw Object.assign(new Error(tr('Extra parameters must be a JSON object')), { status: 400 })
       }
       next.image.extra = extra
+    }
+    if (image.outputFormat === 'gif' || image.outputFormat === 'image') next.image.outputFormat = image.outputFormat
+    if (image.frameCount !== undefined) next.image.frameCount = clamp(image.frameCount, 2, 16, current.image.frameCount)
+    if (image.frameDurationMs !== undefined) {
+      next.image.frameDurationMs = Math.round(clamp(image.frameDurationMs, 20, 2000, current.image.frameDurationMs) / 10) * 10
     }
     if (typeof image.apiKey === 'string' && image.apiKey.trim()) next.image.apiKey = image.apiKey.trim()
     if (image.clearKey === true) next.image.apiKey = ''

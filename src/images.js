@@ -9,7 +9,7 @@ function extensionOf(buffer) {
   if (buffer.length > 8 && buffer[0] === 0x89 && buffer[1] === 0x50) return '.png'
   if (buffer.length > 3 && buffer[0] === 0xff && buffer[1] === 0xd8) return '.jpg'
   if (buffer.length > 12 && buffer.toString('latin1', 0, 4) === 'RIFF' && buffer.toString('latin1', 8, 12) === 'WEBP') return '.webp'
-  if (buffer.length > 6 && buffer.toString('latin1', 0, 3) === 'GIF') return '.gif'
+  if (buffer.length > 6 && ['GIF87a', 'GIF89a'].includes(buffer.toString('latin1', 0, 6))) return '.gif'
   return null
 }
 
@@ -28,6 +28,19 @@ function explain(status, detail) {
 async function requestOnce(image, prompt, fetchImpl, signal) {
   const extra = image.extra ? JSON.parse(image.extra) : {}
   const body = { model: image.model, prompt, n: 1, ...(image.size ? { size: image.size } : {}), ...(image.quality ? { quality: image.quality } : {}), ...extra }
+  if (image.outputFormat === 'gif') {
+    Object.assign(body, {
+      prompt: `${body.prompt} Animate a small, natural motion in a seamless loop, keeping the subject and framing consistent.`,
+      output_format: 'gif',
+      frame_count: image.frameCount ?? 9,
+      frame_duration_ms: image.frameDurationMs ?? 200,
+      size: 'auto',
+      n: 1,
+    })
+    delete body.output_compression
+    delete body.partial_images
+    delete body.stream
+  }
   const res = await fetchImpl(`${image.baseUrl}/images/generations`, {
     method: 'POST',
     headers: { authorization: `Bearer ${image.apiKey}`, 'content-type': 'application/json' },
@@ -76,6 +89,7 @@ export async function generateImage(image, prompt, { fetchImpl = fetch, signal }
       const { buffer } = await requestOnce(image, prompt, fetchImpl, combined)
       if (buffer.length > MAX_IMAGE_BYTES) throw new Error(tr('The image is too large'))
       const ext = extensionOf(buffer)
+      if (image.outputFormat === 'gif' && ext !== '.gif') throw new Error(tr('The image service did not return an animated GIF'))
       if (!ext) throw new Error(tr('What came back isn\'t an image'))
       return { buffer, ext }
     } catch (err) {
