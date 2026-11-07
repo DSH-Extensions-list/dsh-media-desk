@@ -8,7 +8,7 @@ import { assertPublicUrl, harvest, harvestText } from '../src/harvest.js'
 import { activeStyle, normalizeStyle, stylePrompts, styleToVoice } from '../src/style.js'
 import { articlePrompts, planPrompts } from '../src/ai.js'
 import { migrateState } from '../src/seed.js'
-import { importPosts } from '../src/monid.js'
+import { importPosts } from '../src/social.js'
 import { requestRejection } from '../src/host.js'
 import { tr } from '../src/i18n.js'
 import { localIntent, parseWhen } from '../src/intents.js'
@@ -727,8 +727,8 @@ test('When learning a style, the name the user typed wins over the model name', 
   assert.equal(normalizeStyle({}, '').name, 'Untitled style')
 })
 
-test('Monid: profile links accept the supported platform URL formats and reject lookalike hosts', async () => {
-  const { findUrl, parseAccountUrl } = await import('../src/monid.js')
+test('Social imports: profile links accept the supported platform URL formats and reject lookalike hosts', async () => {
+  const { findUrl, parseAccountUrl } = await import('../src/social.js')
   assert.equal(parseAccountUrl('https://www.instagram.com/someone/?hl=en').platform, 'Instagram')
   assert.equal(parseAccountUrl('https://www.instagram.com/someone/?hl=en').id, 'someone')
   assert.equal(parseAccountUrl('https://x.com/someone').id, 'someone')
@@ -739,8 +739,8 @@ test('Monid: profile links accept the supported platform URL formats and reject 
   assert.equal(findUrl('Copy this link https://x.com/someone and open X'), 'https://x.com/someone')
 })
 
-test('Monid: short links only follow the platform\'s own domains, and a non-profile result is an error', async () => {
-  const { resolveAccount } = await import('../src/monid.js')
+test('Social imports: short links only follow the platform\'s own domains, and a non-profile result is an error', async () => {
+  const { resolveAccount } = await import('../src/social.js')
   await assert.rejects(resolveAccount('https://evil.example/x', async () => assert.fail('should not fetch')), /isn't recognized/)
   await assert.rejects(resolveAccount('no link here'), /No link found/)
   const hops = []
@@ -750,59 +750,17 @@ test('Monid: short links only follow the platform\'s own domains, and a non-prof
   assert.equal(hops.length, 0)
 })
 
-const igOutput = { items: [
-  { code: 'DfQCqMnhpsG', taken_at: 1790000000, like_count: 10, comment_count: 6, caption: { text: 'First post\nBody text' }, image_versions2: { candidates: [{ url: 'https://ci.example/1.jpg' }] } },
-  { code: 'bad!', caption: { text: 'Bad data' } },
-] }
-
-test('Monid: only the usable fields come through, and bad rows and platform errors do not', async () => {
-  const { normalizePosts, normalizeProfile } = await import('../src/monid.js')
-  const [post, ...rest] = normalizePosts('Instagram', igOutput)
-  assert.equal(rest.length, 0)
-  assert.deepEqual([post.title, post.likes, post.views, post.cover], ['First post', 10, 0, 'https://ci.example/1.jpg'])
-  assert.equal(post.url, 'https://www.instagram.com/p/DfQCqMnhpsG/')
-  const [tweet] = normalizePosts('X', { status: 'ok', timeline: [{ tweet_id: '123', text: 'First line\nSecond line', created_at: 'Mon Nov 02 21:57:53 +0000 2026', views: '5', favorites: 5, replies: 0, retweets: 0, quotes: 0, bookmarks: 0, media: [] }], user: { profile: 'someone' } })
-  assert.deepEqual([tweet.title, tweet.likes, tweet.url], ['First line', 5, 'https://x.com/someone/status/123'])
-  assert.throws(() => normalizePosts('Instagram', { message: 'Nothing here' }), /Nothing here/)
-  assert.throws(() => normalizePosts('X', { message: 'Rate limited' }), /Rate limited/)
-  assert.equal(normalizeProfile('Instagram', { profile: { data: { user: { full_name: 'Someone', edge_followed_by: { count: 8 } } } } }).followers, 8)
-  assert.equal(normalizeProfile('X', { profile: { name: 'Someone', sub_count: 7 } }).followers, 7)
-})
-
-test('Monid: cost adds up, and the budget limit, missing install and empty account are explained', async () => {
-  const { fetchAccount, monidStatus } = await import('../src/monid.js')
-  const account = { platform: 'Instagram', id: 'someone', url: 'u' }
-  const calls = []
-  const run = async (args) => {
-    calls.push(args)
-    if (args.includes('/api/v1/instagram/v1/fetch_user_info_by_username')) return { status: 'COMPLETED', cost: { value: 0.01 }, output: { data: { user: { id: '25025320', full_name: 'Someone' } } } }
-    return { status: 'COMPLETED', cost: { value: 0.01 }, output: igOutput }
-  }
-  const result = await fetchAccount(account, run)
-  assert.equal(result.posts.length, 1)
-  assert.equal(result.cost, 0.02)
-  assert.equal(calls.length, 2)
-  assert.deepEqual(JSON.parse(calls[0][calls[0].indexOf('--query') + 1]), { username: 'someone' })
-  assert.deepEqual(JSON.parse(calls[1][calls[1].indexOf('--query') + 1]), { user_id: '25025320', count: 20 })
-  await assert.rejects(fetchAccount(account, async () => ({ status: 'BLOCKED' })), /budget limit/)
-  await assert.rejects(fetchAccount(account, async () => null), /isn't installed/)
-  await assert.rejects(fetchAccount(account, async () => ({ status: 'COMPLETED', output: { items: [] } })), /No posts found/)
-  assert.deepEqual(await monidStatus(async () => null), { state: 'missing' })
-  assert.deepEqual(await monidStatus(async () => ({ error: { code: 'AUTH_FAILED' } })), { state: 'nokey' })
-  assert.deepEqual(await monidStatus(async () => ({ balance: { value: 1.5, currency: 'USD' } })), { state: 'ready', balance: { value: 1.5, currency: 'USD' } })
-})
-
-test('Monid: a second import only updates the numbers, sample data drops out of insights, and engagement ranks when there are no views', async () => {
-  const { importPosts, normalizePosts, postsToMaterial } = await import('../src/monid.js')
+test('Social imports: a second import only updates the numbers, sample data drops out of insights, and engagement ranks when there are no views', async () => {
+  const { importPosts, postsToMaterial } = await import('../src/social.js')
   const { computeInsights } = await import('../src/learn.js')
-  const posts = normalizePosts('Instagram', igOutput)
+  const posts = [{ id: 'DfQCqMnhpsG', title: 'First post', body: 'First post\nBody text', publishedAt: '2026-10-01T00:00:00Z', url: 'https://www.instagram.com/p/DfQCqMnhpsG/', likes: 10, comments: 6, views: 0, saves: 0, shares: 0 }]
   const draft = { items: [{ id: 's', title: 'Sample', status: 'published', sample: true }], metrics: [{ id: 'sm', itemId: 's', platform: 'Reddit', date: '2026-01-01T00:00:00Z', views: 9999, likes: 1, sample: true }], accounts: [{ id: 'sa', followers: 500, sample: true }] }
   const account = { platform: 'Instagram', id: 'x', url: 'https://www.instagram.com/x/' }
-  const first = importPosts(draft, { account, profile: { nickname: 'Me', followers: 100 }, posts })
+  const first = importPosts(draft, { account, profile: { nickname: 'Me', followers: 100 }, posts, withMetrics: true })
   assert.deepEqual(first, { added: 1, updated: 0 })
   const item = draft.items.find(row => row.imported)
   item.title = 'My edited title'
-  const second = importPosts(draft, { account, profile: { nickname: 'Me', followers: 120 }, posts: [{ ...posts[0], likes: 50 }] })
+  const second = importPosts(draft, { account, profile: { nickname: 'Me', followers: 120 }, posts: [{ ...posts[0], likes: 50 }], withMetrics: true })
   assert.deepEqual(second, { added: 0, updated: 1 })
   assert.equal(draft.items.filter(row => row.imported).length, 1)
   assert.equal(item.title, 'My edited title')
@@ -818,32 +776,11 @@ test('Monid: a second import only updates the numbers, sample data drops out of 
   assert.match(postsToMaterial(posts), /First post\nBody text/)
 })
 
-test('Monid: no shell is involved, noise around the JSON is tolerated, and errors are readable', async () => {
-  const { createMonidRunner } = await import('../src/monid.js')
-  const located = async () => ({ bin: '/x/monid', path: '/x' })
-  let seen
-  const noisy = createMonidRunner((bin, args, options, callback) => {
-    seen = { bin, args, options }
-    callback(null, 'A new version is available\n{"balance":{"value":1}}\n', '')
-  }, located)
-  const injected = '$(touch /tmp/pwned); --query'
-  assert.deepEqual(await noisy(['run', injected]), { balance: { value: 1 } })
-  assert.equal(seen.bin, '/x/monid')
-  assert.deepEqual(seen.args, ['run', injected])
-  assert.equal(seen.options.shell, undefined)
-  assert.equal(seen.options.env.NO_COLOR, '1')
-  const failing = createMonidRunner((bin, args, options, callback) => callback(new Error('exit 1'), '{"error":{"code":"AUTH_FAILED"}}', ''), located)
-  assert.equal((await failing(['balance', '-j'])).error.code, 'AUTH_FAILED')
-  const broken = createMonidRunner((bin, args, options, callback) => callback(new Error('exit 1'), '', 'broken'), located)
-  await assert.rejects(broken(['balance', '-j']), /broken/)
-  assert.equal(await createMonidRunner(() => assert.fail('should not run'), async () => null)(['balance', '-j']), null)
-})
-
-test('Monid: covers are saved locally, and private addresses, non-images and existing covers are skipped', async () => {
+test('Social imports: covers are saved locally, and private addresses, non-images and existing covers are skipped', async () => {
   const { mkdtemp, readdir, rm } = await import('node:fs/promises')
   const { tmpdir } = await import('node:os')
   const { join } = await import('node:path')
-  const { saveCovers } = await import('../src/monid.js')
+  const { saveCovers } = await import('../src/social.js')
   const dir = await mkdtemp(join(tmpdir(), 'md-covers-'))
   const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 0, 0, 0])
   const requested = []

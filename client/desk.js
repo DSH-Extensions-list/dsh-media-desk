@@ -286,21 +286,41 @@ export async function extractStyle(payload) {
   }
 }
 
-export async function monidStatus() {
+export async function listConnections() {
   try {
-    return await request('monid/status')
+    return (await request('accounts')).connections
   } catch (err) {
-    return { state: 'error', message: err.message }
+    report(err)
+    return null
   }
+}
+
+export async function updateConnection(action, payload) {
+  try {
+    return await request('accounts/' + action, payload)
+  } catch (err) {
+    report(err)
+    return null
+  }
+}
+
+let openSidebarBrowser
+export function setConnectionBrowser(open) {
+  openSidebarBrowser = open
+}
+export function openConnectionSetup(url) {
+  if (openSidebarBrowser?.(url)) return
+  window.open(url, '_blank', 'noopener,noreferrer')
 }
 
 export async function importAccount(payload) {
   try {
-    const data = await request('monid/import', payload)
-    setDesk({ state: data.state, canUndo: true })
-    const spent = data.cost ? t(' · ${cost}', { cost: data.cost.toFixed(3) }) : ''
+    const data = await request('accounts/import', payload)
+    setDesk({ state: data.state, canUndo: Boolean(data.added) || getDesk().canUndo })
     const what = t(plural(data.count, 'Imported 1 post from {name} ({added} new)', 'Imported {count} posts from {name} ({added} new)'), { name: data.nickname, count: data.count, added: data.added })
-    toast(data.styleError ? t('{what}{spent}. Couldn’t learn the style: {error}', { what, spent, error: data.styleError }) : t('{what}. Style learned{spent}', { what, spent }), { error: Boolean(data.styleError), undo: !data.styleError })
+    const message = data.styleError ? t('{what}. Couldn’t learn the style: {error}', { what, error: data.styleError })
+      : data.styleName ? t('{what}. Style learned', { what }) : what
+    toast(message, { error: Boolean(data.styleError), undo: Boolean(data.added) && !data.styleError })
     return true
   } catch (err) {
     report(err)

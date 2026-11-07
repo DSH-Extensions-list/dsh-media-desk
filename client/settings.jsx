@@ -6,7 +6,8 @@ import { Dialog, Icon } from './ui.jsx'
 
 // OpenAI-compatible endpoints for common services; check each vendor's docs for model names. Labels are translated at display time.
 const PRESETS = [
-  { id: 'openai', label: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-image-1', size: '1536x1024', quality: 'medium', extra: '' },
+  { id: 'openai-sunburst', label: 'GPT Image 2.6 Sunburst', baseUrl: 'https://api.openai.com/v1', model: 'gpt-image-2.6-sunburst', size: '1536x1024', quality: 'medium', extra: '' },
+  { id: 'openai-flare', label: 'GPT Image 2.6 Flare', baseUrl: 'https://api.openai.com/v1', model: 'gpt-image-2.6-flare', size: '1536x1024', quality: 'medium', extra: '' },
   { id: 'xai', label: 'xAI', baseUrl: 'https://api.x.ai/v1', model: 'grok-2-image', size: '', quality: '', extra: '' },
   { id: 'ark', label: 'Volcengine Ark', baseUrl: 'https://ark.cn-beijing.volces.com/api/v3', model: '', size: '1024x1024', quality: '', extra: '' },
   { id: 'zhipu', label: 'Zhipu', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'cogview-4', size: '1024x1024', quality: '', extra: '' },
@@ -34,7 +35,7 @@ export function SettingsDialog() {
     image: { baseUrl: form.baseUrl, model: form.model, apiKey: form.apiKey, size: form.size, quality: form.quality, extra: form.extra },
     exportDir: form.exportDir, imageCount: Number(form.imageCount), shotCount: Number(form.shotCount),
   })
-  const activePreset = PRESETS.find(p => p.baseUrl && p.baseUrl === form.baseUrl)?.id ?? (form.baseUrl ? 'custom' : null)
+  const activePreset = PRESETS.find(p => p.baseUrl && p.baseUrl === form.baseUrl && (!p.model || p.model === form.model))?.id ?? (form.baseUrl ? 'custom' : null)
   return (
     <Dialog title={t('Settings')} onClose={close} width={520}>
       <form className="md-form" onSubmit={async (event) => {
@@ -50,22 +51,22 @@ export function SettingsDialog() {
           <span>{t('Image model')}</span>
           <div className="md-presets">
             {PRESETS.map(preset => (
-              <button type="button" key={preset.id} className={activePreset === preset.id ? 'is-on' : ''} onClick={() => setForm(f => ({ ...f, baseUrl: preset.baseUrl, model: preset.model, size: preset.size, quality: preset.quality, extra: preset.extra }))}>{t(preset.label)}</button>
+              <button type="button" key={preset.id} className={activePreset === preset.id ? 'is-on' : ''} onClick={() => setForm(f => ({ ...f, apiKey: f.baseUrl === preset.baseUrl ? f.apiKey : '', baseUrl: preset.baseUrl, model: preset.model, size: preset.size, quality: preset.quality, extra: preset.extra }))}>{t(preset.label)}</button>
             ))}
           </div>
-          <small>{t('Works with any service compatible with the OpenAI images API (/images/generations).')}</small>
+          <small>{t('GPT Image 2.6 uses an OpenAI API key and API billing. Other OpenAI-compatible image endpoints also work.')}</small>
         </div>
         <label className="md-field">
           <span>{t('Endpoint')}</span>
-          <input type="url" value={form.baseUrl} onChange={e => set('baseUrl', e.target.value)} placeholder="https://…/v1" />
+          <input type="url" value={form.baseUrl} onChange={e => setForm(f => ({ ...f, baseUrl: e.target.value, apiKey: '' }))} placeholder="https://…/v1" />
         </label>
         <label className="md-field">
           <span>{t('Model')}</span>
           <input value={form.model} onChange={e => set('model', e.target.value)} placeholder={t('Model name')} />
         </label>
         <label className="md-field">
-          <span>{t('API key')}{settings.image.hasKey ? t(' (saved, ends in {hint})', { hint: settings.image.keyHint }) : ''}</span>
-          <input type="password" autoComplete="off" value={form.apiKey} onChange={e => set('apiKey', e.target.value)} placeholder={settings.image.hasKey ? t('Leave blank to keep the current key') : 'sk-…'} />
+          <span>{t('API key')}{settings.image.hasKey && settings.image.baseUrl === form.baseUrl ? t(' (saved, ends in {hint})', { hint: settings.image.keyHint }) : ''}</span>
+          <input type="password" autoComplete="off" value={form.apiKey} onChange={e => set('apiKey', e.target.value)} placeholder={settings.image.hasKey && settings.image.baseUrl === form.baseUrl ? t('Leave blank to keep the current key') : 'sk-…'} />
           <small>{t('Stored only on this computer. Never saved with your content, bundled, or sent to the model.')}</small>
         </label>
         <div className="md-field-row">

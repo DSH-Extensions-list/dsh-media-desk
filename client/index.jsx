@@ -1,4 +1,5 @@
 // The browser half of dsh-media-desk: the sidebar entry and the full main panel.
+import { setConnectionBrowser } from './desk.js'
 import React from 'react'
 import { HomeView } from './canvas.jsx'
 import { ChatDock } from './chat.jsx'
@@ -187,6 +188,15 @@ function PanelIcon({ size }) {
 export const inject = ['slots']
 
 export function apply(ctx) {
+  ctx.effect(() => {
+    setConnectionBrowser(url => {
+      const sidebar = ctx.get('sidebarRight')
+      if (!sidebar || !ctx.get('sidebarRightTabs')?.get('browser')) return false
+      sidebar.openTab('browser', { params: { url } })
+      return true
+    })
+    return () => setConnectionBrowser(undefined)
+  }, 'dsh-media-desk: account setup browser')
   ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key: PANEL_ID }, Desk))
   // Register the sidebar entry once and release it when the panel unmounts.
   ctx.effect(() => {

@@ -770,7 +770,6 @@ button.md-receipt:hover { transform: translateX(2px); }
 .md-root .md-setup-check { width: 100%; }
 .md-saved-accounts { display: flex; flex-wrap: wrap; gap: 4px; }
 .md-setup-foot { color: var(--ink3); font-size: 11.5px; line-height: 17px; }
-.md-monid-balance { align-self: center; color: var(--ink3); font-size: 12px; white-space: nowrap; }
 .md-root .md-inline-link { color: var(--dsw-alias-link); font-size: inherit; line-height: inherit; }
 
 /* Style sections */
@@ -814,3 +813,6 @@ button.md-receipt:hover { transform: translateX(2px); }
 .md-node.is-dim { opacity: .28; filter: saturate(.5); }
 .md-hero-related { margin-top: 10px; display: flex; gap: 10px; align-items: baseline; color: var(--ink2); font-size: 12.5px; line-height: 18px; animation: md-rise .5s var(--ease) both; }
 
+
+.md-connection { display: grid; gap: 5px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.md-connection p { margin: 0; }

@@ -152,13 +152,13 @@ Requires DeepSeek Harness `0.2.1-rc.5` or later in the `0.2.x` line. Tested on `
 **1. Install.** Copy this release URL into **Plugins → Add plugin** in DeepSeek Harness.
 
 ```text
-https://github.com/DSH-Extensions-list/dsh-media-desk/releases/download/v3.0.0/dsh-media-desk-3.0.0.tgz
+https://github.com/DSH-Extensions-list/dsh-media-desk/releases/download/v3.1.0/dsh-media-desk-3.1.0.tgz
 ```
 
 You can also download the archive and enter its absolute `file:` path in the same dialog. For a self-managed web profile, install it from the directory where you downloaded the archive and restart `dsh web`.
 
 ```bash
-dsh plugin --profile web add "file:$PWD/dsh-media-desk-3.0.0.tgz"
+dsh plugin --profile web add "file:$PWD/dsh-media-desk-3.1.0.tgz"
 ```
 
 **2. Update.** Install the archive for the newer version from [Releases](https://github.com/DSH-Extensions-list/dsh-media-desk/releases).
@@ -178,25 +178,19 @@ The plugin is free and ships with no API keys. Anything that uses a model runs o
 | --- | --- | --- |
 | **Script** | The model you've set up in DeepSeek Harness | A structural outline only |
 | **Cover, images, storyboard** | Your own image API key, added in the plugin settings | Script and storyboard text still work, and the cover is made from text |
-| **Account import** (optional) | Monid for Instagram and X, a third-party data service billed per request (under a cent per account). Reddit import is free: it tries Reddit's JSON API first and falls back to the public Atom feed | Enter numbers by hand, or paste posts to learn a style |
+| **Account import** (optional) | An Instagram access token for your professional account. X uses public profile data and Reddit uses its JSON API or public feed. | Enter numbers by hand, or paste posts to learn a style |
 
-Images work with any service compatible with the OpenAI Images API (`POST {endpoint}/images/generations`). OpenAI, xAI, Volcengine Ark, Zhipu and SiliconFlow come pre-filled, or you can add a custom endpoint. Click **Generate test image** to check that it works. Each draft makes 9 images by default, and you can change that. Your key is stored only in the local `settings.json` (file mode 600). It never goes into your content data and is never sent to the text model.
+Images work with any service compatible with the OpenAI Images API (`POST {endpoint}/images/generations`). GPT Image 2.6 Sunburst and Flare are available as OpenAI presets. They require an OpenAI API key and API billing. xAI, Volcengine Ark, Zhipu, SiliconFlow and custom endpoints are also supported. Click **Generate test image** to check that it works. Each draft makes 9 images by default, and you can change that. Your key is stored only in the local `settings.json` (file mode 600). It never goes into your content data and is never sent to the text model.
 
 <br>
 
 ## Import your own account
 
-In Styles or Insights, click **Import account** and paste a profile or subreddit link. Supported: Instagram, X and Reddit. Imported posts go into Content and Media Desk learns your style from them. Instagram and X imports also bring their engagement numbers into Insights. Importing again adds only new posts and refreshes the numbers.
+In Styles or Insights, click **Import account** to open **Linked accounts**. Enter the profile or subreddit URL and choose **Link and import**. Imported posts appear in Content. **Import now** refreshes a saved source on demand. Auto-refresh runs roughly every eight hours while DeepSeek Harness is open, and can be turned off per account. Failed refreshes leave existing posts in place. Disconnecting stops refreshes and removes the saved token while keeping imported content.
 
-**Reddit is free, and takes two kinds of link.** A profile link (`reddit.com/user/<name>`, or the short `/u/<name>`) brings that account's own posts. A subreddit link (`reddit.com/r/<name>`) brings that community's recent posts, and each post keeps its author, so community posts are never shown as yours. Media Desk asks Reddit's JSON API first, which carries scores and comment counts; when Reddit refuses it (it blocks datacentre IPs and rate-limits bursts), the import falls back to the public Atom feed, which carries titles, dates and links but no scores. You get whichever one Reddit serves. Numbers missing from the feed are entered by hand or pasted as CSV. A profile import that reaches the JSON API writes its scores and comment counts into Insights; a subreddit's scores belong to its posters, so they are not counted as the account's engagement. No API key and no third-party service either way.
-
-**Instagram and X use Monid.** These imports are for an organisation or creator account, not a personal profile. Both are public profiles, so the same import works. The first time, connect [Monid](https://monid.ai) in three steps:
-
-1. In a new DeepSeek Harness session, send `set up https://monid.ai/SKILL.md`. It installs the Monid command-line tool.
-2. Sign up at [app.monid.ai](https://app.monid.ai/access/api-keys) and create an API key.
-3. In your terminal, run `monid keys add -k YOUR_KEY -l main`. Don't paste the key into a chat.
-
-The plugin only runs the local `monid` command and never sees your key. A Reddit import never calls Monid.
+- **Instagram:** In your [Meta app](https://developers.facebook.com/apps/), add Instagram API with Instagram Login and generate an access token for your Business or Creator account with `instagram_business_basic`. The setup button can open the dashboard in the DSH Sidebar Browser. Paste the token into the Linked accounts form. Media Desk verifies the token's account and stores it only on the local host. Replace the token when it expires.
+- **X:** Enter an `x.com/<handle>` profile. Media Desk reads the recent original posts X makes available on the public profile. Login screens or rate limits can interrupt refreshes.
+- **Reddit:** Enter a profile (`reddit.com/user/<name>` or `/u/<name>`) or a subreddit (`reddit.com/r/<name>`). Media Desk tries JSON first, then the public Atom feed. Reddit profile scores and comment counts reach Insights when JSON is available. Community posts keep their authors and stay out of account metrics.
 
 <br>
 
@@ -207,7 +201,7 @@ The plugin only runs the local `monid` command and never sees your key. A Reddit
 <summary><b>Can I import someone else's account?</b></summary>
 <br>
 
-Import only accounts you own. Instagram and X profile links are sent to Monid and its data providers, so check that this fits your platform's terms. Reddit links are read from Reddit itself: the JSON API when it is reachable, the public Atom feed otherwise. A subreddit import reads a community's public posts, with each post's author kept. Only public data is available, and the feed carries no view, like or follower counts, so numbers missing from it stay manual. You can still paste content or public links to learn a style.
+Instagram requires authorization from the account. X and Reddit can import recent public posts. You can also paste content or public links to learn a style.
 
 </details>
 
@@ -265,12 +259,11 @@ node scripts/mock-llm.mjs      # mock text and image models, no quota used
 npm pack                       # build the installable tgz
 ```
 
-`scripts/mock-monid.mjs` is a fake `monid` command that returns made-up content, so you can test the Instagram and X import flow for free. Wrap it as an executable named `monid` and put it first on your `PATH`. Reddit import needs no mock: it tries Reddit's JSON API, then the public feed.
 
 | Path | Contents |
 | --- | --- |
 | `client/` | UI: idea wall, studio, chat, content, schedule, insights, styles, settings |
-| `src/` | Host routes, drafting pipeline, prompts, image generation, style learning, Monid and Reddit import, local storage |
+| `src/` | Host routes, drafting pipeline, prompts, image generation, style learning, social imports, local storage |
 | `scripts/` | Bundling, sandbox, mock models, sample asset generation |
 | `assets/` | Sample images and videos, all generated by `scripts/gen-assets.py` |
 | `docs/assets/` | The images on this page |
@@ -279,7 +272,7 @@ Restart DeepSeek Harness after changing `src/`.
 
 **Upgrading from the Chinese 2.x releases:** content written by those releases is not migrated or translated. An existing `state.json` is loaded rather than replaced, so old Chinese text and platform values remain. Anyone moving from those releases should use a clean or separate data directory, or keep using [upstream](https://github.com/woniuniuniu/dsh-media-desk). There is no automatic reset.
 
-**Security:** Every route is authenticated by the host. Model output and fetched content are reduced to known fields with length limits, and only allow-listed operations run. Pasted links can't reach localhost or private networks. `monid` runs without a shell, and account IDs must match fixed formats. Please report vulnerabilities privately through [Security Advisories](https://github.com/DSH-Extensions-list/dsh-media-desk/security/advisories/new).
+**Security:** Every route is authenticated by the host. Model output and fetched content are reduced to known fields with length limits, and only allow-listed operations run. Pasted links can't reach localhost or private networks. Account URLs are validated and access tokens stay out of browser responses. Please report vulnerabilities privately through [Security Advisories](https://github.com/DSH-Extensions-list/dsh-media-desk/security/advisories/new).
 
 <br>
 

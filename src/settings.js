@@ -49,6 +49,7 @@ export class Settings {
     if (typeof image.baseUrl === 'string') {
       const url = image.baseUrl.trim().replace(/\/+$/, '').replace(/\/images\/generations$/, '')
       if (url && !/^https?:\/\/[^\s]+$/i.test(url)) throw Object.assign(new Error(tr('The endpoint must start with http:// or https://')), { status: 400 })
+      if (url !== current.image.baseUrl) next.image.apiKey = ''
       next.image.baseUrl = url
     }
     if (typeof image.extra === 'string') {

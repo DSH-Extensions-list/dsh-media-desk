@@ -10,7 +10,8 @@ import { harvest, harvestText } from './harvest.js'
 import { generateImage } from './images.js'
 import { localIntent } from './intents.js'
 import { computeInsights, exportSkill, proposeRules } from './learn.js'
-import { createMonidRunner, fetchAccount, importPosts, monidStatus, postsToMaterial, resolveAccount, saveCovers } from './monid.js'
+import { fetchInstagram, fetchPublicX, importPosts, postsToMaterial, resolveAccount, saveCovers } from './social.js'
+import { Connections } from './connections.js'
 import { applyOps, newId } from './ops.js'
 import { applyRevision, Producer } from './produce.js'
 import { fetchRedditFeed, parseRedditSource } from './reddit.js'
@@ -223,47 +224,81 @@ async function learnImportedStyle(ctx, store, { account, profile, posts }) {
   }
 }
 
-/** Reddit is free: try its JSON API for scores and comment counts, fall back to the Atom feed,
- * save the content and the account row, and skip Monid, cost checks and cover downloads. */
-async function importRedditAccount(ctx, store, source) {
-  const { posts, via } = await fetchRedditFeed(source)
-  if (!posts.length) {
-    throw Object.assign(new Error(source.kind === 'subreddit'
-      ? tr('No posts found in this subreddit. It may be private or have no public posts.')
-      : tr('No posts found on this Reddit profile. The account may be new, private, or have no public submissions.')), { status: 404 })
-  }
-  const handle = `${source.kind === 'subreddit' ? 'r' : 'u'}/${source.id}`
-  const profile = { nickname: handle, description: '', followers: null }
-  const account = { platform: 'Reddit', id: handle, url: source.url }
-  // Only the JSON API carries real numbers, and a subreddit's scores belong to its posters rather
-  // than to the account being imported, so only a JSON user import writes metric rows.
-  const withMetrics = source.kind === 'user' && via === 'json'
-  const imported = withMetrics
-    ? posts.map(post => ({ ...post, views: 0, likes: post.score, comments: post.comments, shares: 0, saves: 0 }))
-    : posts
-  const added = await store.mutate(tr('Import {platform} account', { platform: account.platform }), draft => importPosts(draft, { account, profile, posts: imported, withMetrics }).added)
-  const { nickname, styleError } = await learnImportedStyle(ctx, store, { account, profile, posts })
-  return { platform: account.platform, kind: source.kind, via, nickname, count: posts.length, added, cost: 0, styleName: styleError ? null : nickname, styleError, state: await store.read() }
+function importBusy(desk) {
+  if (desk.importing) throw Object.assign(new Error(tr('Another account is still importing. Try again when it finishes.')), { status: 409 })
 }
 
-/** Import an account or subreddit. Reddit uses its free JSON API or public feed; Instagram and X go
- * through Monid, which charges per request, so save the content first: a failed style extraction
- * still leaves the import worth the spend. */
-async function importAccountRoute(ctx, store, desk, body) {
-  if (desk.importing) throw Object.assign(new Error(tr('Another account is still importing. Try again when it finishes.')), { status: 409 })
+async function readSocialPosts(account) {
+  if (account.platform === 'X') return fetchPublicX(account)
+  if (account.platform === 'Instagram') return fetchInstagram(account, account.token)
+  const { posts, via } = await fetchRedditFeed({ ...account, id: account.id.slice(2) })
+  if (!posts.length) throw Object.assign(new Error(tr('No public posts found for this Reddit source.')), { status: 404 })
+  const withMetrics = account.kind === 'user' && via === 'json'
+  return {
+    posts: withMetrics ? posts.map(post => ({ ...post, views: 0, likes: post.score, comments: post.comments, shares: 0, saves: 0 })) : posts,
+    profile: { nickname: account.id }, via, withMetrics,
+  }
+}
+
+async function syncSource(ctx, store, desk, account, { automatic = false } = {}) {
+  importBusy(desk)
   desk.importing = true
+  const key = account.platform + ':' + account.id.toLowerCase()
   try {
-    const text = String(body.text ?? '')
-    const reddit = parseRedditSource(text)
-    if (reddit) return await importRedditAccount(ctx, store, reddit)
-    const account = await resolveAccount(text)
-    const { posts, profile, cost } = await fetchAccount(account, desk.monid)
-    const covers = await saveCovers(posts, account.platform, await store.read(), store.filesDir)
-    const added = await store.mutate(tr('Import {platform} account', { platform: account.platform }), draft => importPosts(draft, { account, profile, posts, covers }).added)
-    const { nickname, styleError } = await learnImportedStyle(ctx, store, { account, profile, posts })
-    return { platform: account.platform, nickname, count: posts.length, added, cost, styleName: styleError ? null : nickname, styleError, state: await store.read() }
+    const { posts, profile, via, withMetrics } = await readSocialPosts(account)
+    const covers = account.platform === 'Instagram' ? await saveCovers(posts, account.platform, await store.read(), store.filesDir) : undefined
+    const added = await store.mutate(tr('Import {platform} posts', { platform: account.platform }), draft =>
+      importPosts(draft, { account, profile, posts, covers, withMetrics }).added, { undoable: !automatic })
+    if (!automatic) await desk.connections.save(account)
+    await desk.connections.record(key, { at: Date.now(), error: null })
+    // Background refreshes should never spend model quota or change the active writing style.
+    const style = automatic || !added ? {} : await learnImportedStyle(ctx, store, { account, profile, posts })
+    return {
+      platform: account.platform, kind: account.kind, via, nickname: profile.nickname, count: posts.length, added,
+      styleError: style.styleError, styleName: style.styleError === null ? profile.nickname : null, state: await store.read(),
+    }
+  } catch (error) {
+    // Provider responses are untrusted and must never expose credentials in status or browser errors.
+    const message = account.token ? String(error.message).split(account.token).join('[redacted]') : String(error.message)
+    await desk.connections.record(key, { at: Date.now(), error: message })
+    throw Object.assign(new Error(message), { status: error.status })
   } finally {
     desk.importing = false
+  }
+}
+
+async function importAccountRoute(ctx, store, desk, body) {
+  importBusy(desk)
+  const rows = await desk.connections.read()
+  if (typeof body.key === 'string') {
+    const saved = rows.find(row => row.key === body.key)
+    if (!saved) throw Object.assign(new Error(tr('This connection no longer exists.')), { status: 404 })
+    return syncSource(ctx, store, desk, saved)
+  }
+  const text = String(body.text ?? '')
+  const reddit = parseRedditSource(text)
+  const account = reddit ? { ...reddit, id: (reddit.kind === 'subreddit' ? 'r/' : 'u/') + reddit.id } : await resolveAccount(text)
+  const existing = rows.find(row => row.key === account.platform + ':' + account.id.toLowerCase())
+  const token = typeof body.token === 'string' ? body.token.trim() : ''
+  if (account.platform === 'Instagram') {
+    if (token && !/^[A-Za-z0-9._|~-]{1,4096}$/.test(token)) {
+      throw Object.assign(new Error(tr('Enter a valid Instagram access token.')), { status: 400 })
+    }
+    account.token = token || existing?.token
+    if (!account.token) throw Object.assign(new Error(tr('Add an Instagram access token to link this account.')), { status: 400 })
+  }
+  account.auto = typeof body.auto === 'boolean' ? body.auto : existing?.auto !== false
+  return syncSource(ctx, store, desk, account)
+}
+
+async function refreshDue(ctx, store, desk) {
+  if (desk.importing || desk.stopping) return
+  for (const account of await desk.connections.due(Date.now())) {
+    if (desk.importing || desk.stopping) return
+    // Re-read after each import so an account disconnected during the previous request stays disconnected.
+    const current = (await desk.connections.read()).find(row => row.key === account.key)
+    if (!current || current.auto === false || current.lastAttemptAt !== account.lastAttemptAt) continue
+    await syncSource(ctx, store, desk, current, { automatic: true }).catch(() => {})
   }
 }
 
@@ -339,7 +374,7 @@ async function route(ctx, store, desk, req, res) {
     }
     if (path === 'settings') return json(res, 200, { ...publicSettings(await desk.settings.read()), defaultExportDir: defaultExportDir() })
     if (path === 'insights') return json(res, 200, computeInsights(await store.read()))
-    if (path === 'monid/status') return json(res, 200, await monidStatus(desk.monid))
+    if (path === 'accounts') return json(res, 200, { connections: await desk.connections.list() })
     return json(res, 404, { error: tr('Not found') })
   }
   if (method !== 'POST') return json(res, 405, { error: tr('Method not allowed') })
@@ -409,7 +444,19 @@ async function route(ctx, store, desk, req, res) {
       return json(res, 200, { path })
     }
     case 'style/extract': return json(res, 200, await extractStyle(ctx, store, body))
-    case 'monid/import': return json(res, 200, await importAccountRoute(ctx, store, desk, body))
+    case 'accounts/import': return json(res, 200, await importAccountRoute(ctx, store, desk, body))
+    case 'accounts/disconnect': {
+      importBusy(desk)
+      await desk.connections.remove(String(body.key ?? ''))
+      return json(res, 200, { connections: await desk.connections.list() })
+    }
+    case 'accounts/automatic': {
+      importBusy(desk)
+      const row = (await desk.connections.read()).find(entry => entry.key === body.key)
+      if (!row || typeof body.auto !== 'boolean') return json(res, 400, { error: tr('Choose a saved connection and a refresh preference.') })
+      await desk.connections.setAutomatic(row.key, body.auto)
+      return json(res, 200, { connections: await desk.connections.list() })
+    }
     case 'settings':
       return json(res, 200, { ...publicSettings(await desk.settings.update(body)), defaultExportDir: defaultExportDir() })
     case 'settings/test': {
@@ -469,8 +516,19 @@ export default {
     const store = new Store()
     const settings = new Settings(store.root)
     const producer = new Producer({ store, settings, callText: options => callModel(ctx, options), generate: generateImage })
-    const monid = createMonidRunner()
-    const desk = { settings, producer, monid }
+    const desk = { settings, producer, connections: new Connections(store.root) }
+    ctx.effect(() => {
+      const refresh = () => { void refreshDue(ctx, store, desk).catch(() => {}) }
+      const startup = setTimeout(refresh, 15_000)
+      const interval = setInterval(refresh, 60_000)
+      startup.unref()
+      interval.unref()
+      return () => {
+        desk.stopping = true
+        clearTimeout(startup)
+        clearInterval(interval)
+      }
+    }, 'dsh-media-desk: linked account refresh')
     ctx.effect(() => ctx.webServer.register({
       kind: 'prefix',
       path: '/media-desk',
