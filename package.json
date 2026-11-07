@@ -34,10 +34,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/arzvaak/dsh-media-desk.git"
+    "url": "git+https://github.com/DSH-Extensions-list/dsh-media-desk.git"
   },
-  "homepage": "https://github.com/arzvaak/dsh-media-desk#readme",
-  "bugs": "https://github.com/arzvaak/dsh-media-desk/issues",
+  "homepage": "https://github.com/DSH-Extensions-list/dsh-media-desk#readme",
+  "bugs": "https://github.com/DSH-Extensions-list/dsh-media-desk/issues",
   "scripts": {
     "build": "node scripts/build.mjs",
     "watch": "node scripts/build.mjs --watch",

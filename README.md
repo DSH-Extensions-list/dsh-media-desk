@@ -21,7 +21,7 @@
   <img alt="DeepSeek Harness 0.2.x" src="https://img.shields.io/badge/DeepSeek%20Harness-0.2.x-111?style=flat-square">
   <img alt="Mac desktop and web" src="https://img.shields.io/badge/Mac%20desktop-web-111?style=flat-square">
   <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/MIT-open%20source-111?style=flat-square"></a>
-  <a href="https://github.com/arzvaak/dsh-media-desk/stargazers"><img alt="Star" src="https://img.shields.io/github/stars/arzvaak/dsh-media-desk?style=flat-square&color=111&label=Star"></a>
+  <a href="https://github.com/DSH-Extensions-list/dsh-media-desk/stargazers"><img alt="Star" src="https://img.shields.io/github/stars/DSH-Extensions-list/dsh-media-desk?style=flat-square&color=111&label=Star"></a>
 </p>
 
 <br>
@@ -149,23 +149,23 @@ It works with Instagram, X and Reddit.
 
 Requires DeepSeek Harness `0.2.1-rc.5` or later in the `0.2.x` line. Tested on `0.2.2-rc.1`, desktop and web.
 
-**1. Install.** In the DeepSeek Harness desktop app, go to Plugins → Add plugin, enter `dsh-media-desk`, and install.
+**1. Install.** Copy this release URL into **Plugins → Add plugin** in DeepSeek Harness.
 
-You can also install from the command line. Quit the desktop app completely (⌘Q) first and reopen it afterwards. For the web version, restart `dsh web`. If the `dsh` command isn't available in your terminal, choose "Manage dsh command" from the desktop app's menu.
-
-```bash
-dsh plugin --profile desktop add dsh-media-desk
+```text
+https://github.com/DSH-Extensions-list/dsh-media-desk/releases/download/v3.0.0/dsh-media-desk-3.0.0.tgz
 ```
 
+You can also download the archive and enter its absolute `file:` path in the same dialog. For a self-managed web profile, install it from the directory where you downloaded the archive and restart `dsh web`.
+
 ```bash
-dsh plugin --profile web add dsh-media-desk
+dsh plugin --profile web add "file:$PWD/dsh-media-desk-3.0.0.tgz"
 ```
 
-**2. Update.** When a new version comes out, update it on the Plugins page or run the same command again. To install offline, download `dsh-media-desk-*.tgz` from [Releases](https://github.com/arzvaak/dsh-media-desk/releases/latest) and use `"file:$PWD/dsh-media-desk-VERSION.tgz"` in place of the package name.
+**2. Update.** Install the archive for the newer version from [Releases](https://github.com/DSH-Extensions-list/dsh-media-desk/releases).
 
 **3. Open.** **Media Desk** appears in the sidebar. On first launch it's filled with sample data so you can explore every page. Click **Clear sample data** in the top right when you're ready to start with your own.
 
-To uninstall, replace `add` with `remove`. Your content stays in `~/.dsh/media-desk/`.
+To uninstall, remove Media Desk from the Plugins page. For the web profile, run `dsh plugin --profile web remove dsh-media-desk`. Your content stays in `~/.dsh/media-desk/`.
 
 <br>
 
@@ -247,7 +247,7 @@ No. It's a community plugin. Scripts are written by the model you've set up in D
 
 ## About this edition
 
-This is the English-only edition of Media Desk, with three platforms: Instagram, X and Reddit. It is maintained at [arzvaak/dsh-media-desk](https://github.com/arzvaak/dsh-media-desk). Issues and ideas are welcome on [GitHub](https://github.com/arzvaak/dsh-media-desk/issues).
+This is the English-only edition of Media Desk, with three platforms: Instagram, X and Reddit. It is maintained at [DSH-Extensions-list/dsh-media-desk](https://github.com/DSH-Extensions-list/dsh-media-desk). Issues and ideas are welcome on [GitHub](https://github.com/DSH-Extensions-list/dsh-media-desk/issues).
 
 ## Thanks
 
@@ -279,7 +279,7 @@ Restart DeepSeek Harness after changing `src/`.
 
 **Upgrading from the Chinese 2.x releases:** content written by those releases is not migrated or translated. An existing `state.json` is loaded rather than replaced, so old Chinese text and platform values remain. Anyone moving from those releases should use a clean or separate data directory, or keep using [upstream](https://github.com/woniuniuniu/dsh-media-desk). There is no automatic reset.
 
-**Security:** Every route is authenticated by the host. Model output and fetched content are reduced to known fields with length limits, and only allow-listed operations run. Pasted links can't reach localhost or private networks. `monid` runs without a shell, and account IDs must match fixed formats. Please report vulnerabilities privately through [Security Advisories](https://github.com/arzvaak/dsh-media-desk/security/advisories/new).
+**Security:** Every route is authenticated by the host. Model output and fetched content are reduced to known fields with length limits, and only allow-listed operations run. Pasted links can't reach localhost or private networks. `monid` runs without a shell, and account IDs must match fixed formats. Please report vulnerabilities privately through [Security Advisories](https://github.com/DSH-Extensions-list/dsh-media-desk/security/advisories/new).
 
 <br>
 
