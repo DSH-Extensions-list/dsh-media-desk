@@ -20,6 +20,7 @@ test('Reddit sources: profiles and subreddits are recognized, while lookalike ho
   assert.deepEqual(parseRedditSource('https://reddit.com/u/Some_User-1/'), { platform: 'Reddit', kind: 'user', id: 'Some_User-1', url: 'https://www.reddit.com/user/Some_User-1' })
   assert.deepEqual(parseRedditSource('See https://WWW.REDDIT.COM/R/programming please'), { platform: 'Reddit', kind: 'subreddit', id: 'programming', url: 'https://www.reddit.com/r/programming' })
   assert.deepEqual(parseRedditSource('reddit.com/r/AskReddit/'), { platform: 'Reddit', kind: 'subreddit', id: 'AskReddit', url: 'https://www.reddit.com/r/AskReddit' })
+  assert.equal(parseRedditSource('https://www.reddit.com/r/test/new').url, 'https://www.reddit.com/r/test')
   // The user-only helper still works for the callers that import profiles.
   assert.deepEqual(parseRedditProfile('https://www.reddit.com/user/spez'), { platform: 'Reddit', id: 'spez', url: 'https://www.reddit.com/user/spez' })
   assert.equal(parseRedditProfile('https://www.reddit.com/r/programming'), null)
@@ -37,7 +38,6 @@ test('Reddit sources: profiles and subreddits are recognized, while lookalike ho
     `https://www.reddit.com/r/${'a'.repeat(22)}`,
     'https://www.reddit.com/r/bad-name',
     'https://www.reddit.com/r/test/comments/abc/title/',
-    'https://www.reddit.com/r/test/new',
     'https://www.reddit.com/user/spez/comments',
     'javascript:alert(1)',
   ]) assert.equal(parseRedditSource(bad), null, bad)

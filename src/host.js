@@ -10,11 +10,12 @@ import { harvest, harvestText } from './harvest.js'
 import { generateImage } from './images.js'
 import { localIntent } from './intents.js'
 import { computeInsights, exportSkill, proposeRules } from './learn.js'
-import { fetchInstagram, fetchPublicX, importPosts, postsToMaterial, resolveAccount, saveCovers } from './social.js'
+import { fetchInstagram, fetchPublicX, importPosts, postsToMaterial, saveCovers } from './social.js'
 import { Connections } from './connections.js'
 import { applyOps, newId } from './ops.js'
 import { applyRevision, Producer } from './produce.js'
-import { fetchRedditFeed, parseRedditSource } from './reddit.js'
+import { fetchRedditFeed } from './reddit.js'
+import { resolveAccount } from './source-links.js'
 import { publicSettings, Settings, imageReady } from './settings.js'
 import { normalizeStyle, stylePrompts } from './style.js'
 import { dshHome, Store } from './store.js'
@@ -275,9 +276,10 @@ async function importAccountRoute(ctx, store, desk, body) {
     if (!saved) throw Object.assign(new Error(tr('This connection no longer exists.')), { status: 404 })
     return syncSource(ctx, store, desk, saved)
   }
-  const text = String(body.text ?? '')
-  const reddit = parseRedditSource(text)
-  const account = reddit ? { ...reddit, id: (reddit.kind === 'subreddit' ? 'r/' : 'u/') + reddit.id } : await resolveAccount(text)
+  const source = await resolveAccount(body.text, body.platform)
+  const account = source.platform === 'Reddit'
+    ? { ...source, id: (source.kind === 'subreddit' ? 'r/' : 'u/') + source.id }
+    : source
   const existing = rows.find(row => row.key === account.platform + ':' + account.id.toLowerCase())
   const token = typeof body.token === 'string' ? body.token.trim() : ''
   if (account.platform === 'Instagram') {

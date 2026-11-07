@@ -1,5 +1,6 @@
 // The browser half of dsh-media-desk: the sidebar entry and the full main panel.
 import { setConnectionBrowser } from './desk.js'
+import { ConnectDialog } from './connect.jsx'
 import React from 'react'
 import { HomeView } from './canvas.jsx'
 import { ChatDock } from './chat.jsx'
@@ -117,6 +118,7 @@ function Desk() {
   const dockOpen = useDesk(s => s.dockOpen)
   const canUndo = useDesk(s => s.canUndo)
   const rootRef = React.useRef(null)
+  const [sourcesOpen, setSourcesOpen] = React.useState(false)
   const [width, setWidth] = React.useState(1600)
   const narrow = width < 1020
 
@@ -162,6 +164,7 @@ function Desk() {
           <span style={{ flex: 1 }} />
           {ready ? <SampleBadge /> : null}
           {canUndo ? <IconButton icon="undo" label={t('Undo')} onClick={undo} /> : null}
+          <IconButton icon="link" label={t('Sources')} onClick={() => setSourcesOpen(true)} />
           <IconButton icon="gear" label={t('Settings')} onClick={() => setDesk({ settingsOpen: true })} />
           {showDock ? null : <button type="button" className="md-open-dock" onClick={() => setDesk({ dockOpen: true })}><Icon name="chat" size={15} />{t('Assistant')}</button>}
         </header>
@@ -176,6 +179,7 @@ function Desk() {
       {ready ? <CaptureDialog /> : null}
       <FormDialog />
       {ready ? <SettingsDialog /> : null}
+      {ready && sourcesOpen ? <ConnectDialog onClose={() => setSourcesOpen(false)} /> : null}
       <Toast />
     </div>
   )

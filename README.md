@@ -152,13 +152,13 @@ Requires DeepSeek Harness `0.2.1-rc.5` or later in the `0.2.x` line. Tested on `
 **1. Install.** Copy this release URL into **Plugins → Add plugin** in DeepSeek Harness.
 
 ```text
-https://github.com/DSH-Extensions-list/dsh-media-desk/releases/download/v3.1.1/dsh-media-desk-3.1.1.tgz
+https://github.com/DSH-Extensions-list/dsh-media-desk/releases/download/v3.1.2/dsh-media-desk-3.1.2.tgz
 ```
 
 You can also download the archive and enter its absolute `file:` path in the same dialog. For a self-managed web profile, install it from the directory where you downloaded the archive and restart `dsh web`.
 
 ```bash
-dsh plugin --profile web add "file:$PWD/dsh-media-desk-3.1.1.tgz"
+dsh plugin --profile web add "file:$PWD/dsh-media-desk-3.1.2.tgz"
 ```
 
 **2. Update.** Install the archive for the newer version from [Releases](https://github.com/DSH-Extensions-list/dsh-media-desk/releases).
@@ -186,11 +186,13 @@ Images work with any service compatible with the OpenAI Images API (`POST {endpo
 
 ## Import your own account
 
-In Styles or Insights, click **Import account** to open **Linked accounts**. Enter the profile or subreddit URL and choose **Link and import**. Imported posts appear in Content. **Import now** refreshes a saved source on demand. Auto-refresh runs roughly every eight hours while DeepSeek Harness is open, and can be turned off per account. Failed refreshes leave existing posts in place. Disconnecting stops refreshes and removes the saved token while keeping imported content.
+Open **Sources** from the toolbar, or choose **Import account** in Styles or Insights. Paste a profile URL or copied share link. If you only have a handle, choose Instagram or X first. Reddit also accepts `r/community` and `u/username`. Choose **Link and import**. Imported posts appear in Content. **Import now** refreshes a saved source on demand. Auto-refresh runs roughly every eight hours while DeepSeek Harness is open, and can be turned off per account. Failed refreshes leave existing posts in place. Disconnecting stops refreshes and removes the saved token while keeping imported content.
 
-- **Instagram:** In your [Meta app](https://developers.facebook.com/apps/), add Instagram API with Instagram Login and generate an access token for your Business or Creator account with `instagram_business_basic`. The setup button can open the dashboard in the DSH Sidebar Browser. Paste the token into the Linked accounts form. Media Desk verifies the token's account and stores it only on the local host. Replace the token when it expires.
+- **Instagram:** In your [Meta app](https://developers.facebook.com/apps/), add Instagram API with Instagram Login and generate an access token for your Business or Creator account with `instagram_business_basic`. The setup button can open the dashboard in the DSH Sidebar Browser. Follow the steps in Sources and paste the token into the local form. Media Desk verifies the token's account and stores it only on the local host. Replace the token when it expires.
 - **X:** Enter an `x.com/<handle>` profile. Media Desk reads the recent original posts X makes available on the public profile. Login screens or rate limits can interrupt refreshes.
 - **Reddit:** Enter a profile (`reddit.com/user/<name>` or `/u/<name>`) or a subreddit (`reddit.com/r/<name>`). Media Desk tries JSON first, then the public Atom feed. Reddit profile scores and comment counts reach Insights when JSON is available. Community posts keep their authors and stay out of account metrics.
+
+For an individual post, article or other web page, use **Sources → Save a link**. It saves a bookmark to Ideas, so the link works even if the site requires a login to read the page. You can give it your own title.
 
 <br>
 

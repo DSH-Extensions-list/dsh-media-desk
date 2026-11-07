@@ -7,56 +7,7 @@ import { tr } from './i18n.js'
 const COVER_MAX_BYTES = 8 * 1024 * 1024
 const COVER_CONCURRENCY = 4
 
-// These paths on a profile URL are not account names
-const RESERVED = {
-  Instagram: new Set(['p', 'reel', 'reels', 'explore', 'stories', 'accounts', 'direct', 'tv']),
-  X: new Set(['i', 'home', 'search', 'explore', 'intent', 'share', 'settings', 'messages', 'notifications', 'hashtag', 'compose']),
-}
-
-function hostIs(host, name) {
-  return host === name || host.endsWith(`.${name}`)
-}
-
-/** Find the first link in shared text. Text shared out of an app often mixes in a title and a share code. */
-export function findUrl(text) {
-  const match = /https?:\/\/[^\s"'<>()[\]{}]+/i.exec(String(text ?? ''))
-  return match?.[0] ?? null
-}
-
-/**
- * Read a supported platform and account id out of a profile link.
- * @param {string} raw - The link.
- * @returns {{platform: string, id: string, url: string}|null} null when it isn't recognized.
- */
-export function parseAccountUrl(raw) {
-  let url
-  try {
-    url = new URL(raw)
-  } catch {
-    return null
-  }
-  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.port) return null
-  const host = url.hostname.toLowerCase()
-  if (hostIs(host, 'instagram.com')) {
-    const id = /^\/([\w.]{1,30})\/?$/.exec(url.pathname)?.[1]
-    return id && !RESERVED.Instagram.has(id.toLowerCase()) ? { platform: 'Instagram', id, url: `https://www.instagram.com/${id}/` } : null
-  }
-  if (hostIs(host, 'x.com') || hostIs(host, 'twitter.com')) {
-    const id = /^\/(\w{1,15})\/?$/.exec(url.pathname)?.[1]
-    return id && !RESERVED.X.has(id.toLowerCase()) ? { platform: 'X', id, url: `https://x.com/${id}` } : null
-  }
-  return null
-}
-
-/** Read the platform and account id out of pasted text. Reddit profiles are recognised by reddit.js
- * before this runs. */
-export async function resolveAccount(text) {
-  const first = findUrl(text)
-  if (!first) throw Object.assign(new Error(tr('No link found. Paste the URL of the account\'s profile page.')), { status: 400 })
-  const account = parseAccountUrl(first)
-  if (account) return account
-  throw Object.assign(new Error(tr('This profile link isn\'t recognized. Instagram, X and Reddit profiles are supported. For other platforms, paste your posts to learn a style.')), { status: 400 })
-}
+export { findUrl, parseAccountUrl, resolveAccount } from './source-links.js'
 
 function sniffImage(buffer) {
   if (buffer[0] === 0xff && buffer[1] === 0xd8) return '.jpg'

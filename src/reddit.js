@@ -5,7 +5,7 @@
 // the feed is small and regular enough for a few targeted regular expressions.
 import { tr } from './i18n.js'
 
-const REDDIT_HOSTS = new Set(['reddit.com', 'www.reddit.com'])
+const REDDIT_HOSTS = new Set(['reddit.com', 'www.reddit.com', 'old.reddit.com', 'new.reddit.com', 'm.reddit.com'])
 const RESERVED = new Set(['me', 'all', 'popular', 'saved', 'submit', 'login', 'register', 'settings', 'prefs'])
 const USERNAME = /^[A-Za-z0-9_-]{3,20}$/
 const SUBREDDIT = /^[A-Za-z0-9_]{3,21}$/
@@ -44,10 +44,12 @@ function parseSourceUrl(raw) {
   } catch {
     return null
   }
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') return null
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.port) return null
   if (!REDDIT_HOSTS.has(url.hostname.toLowerCase())) return null
   const parts = url.pathname.split('/').filter(Boolean)
-  if (parts.length !== 2) return null
+  const listingTab = parts.length === 3 && parts[0].toLowerCase() === 'r'
+    && ['new', 'hot', 'top', 'rising', 'controversial'].includes(parts[2].toLowerCase())
+  if (parts.length !== 2 && !listingTab) return null
   const head = parts[0].toLowerCase()
   const kind = head === 'r' ? 'subreddit' : head === 'user' || head === 'u' ? 'user' : null
   if (!kind) return null
