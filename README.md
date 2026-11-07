@@ -152,13 +152,13 @@ Requires DeepSeek Harness `0.2.1-rc.5` or later in the `0.2.x` line. Tested on `
 **1. Install.** Copy this release URL into **Plugins → Add plugin** in DeepSeek Harness.
 
 ```text
-https://github.com/DSH-Extensions-list/dsh-media-desk/releases/download/v3.2.0/dsh-media-desk-3.2.0.tgz
+https://github.com/DSH-Extensions-list/dsh-media-desk/releases/download/v3.2.1/dsh-media-desk-3.2.1.tgz
 ```
 
 You can also download the archive and enter its absolute `file:` path in the same dialog. For a self-managed web profile, install it from the directory where you downloaded the archive and restart `dsh web`.
 
 ```bash
-dsh plugin --profile web add "file:$PWD/dsh-media-desk-3.2.0.tgz"
+dsh plugin --profile web add "file:$PWD/dsh-media-desk-3.2.1.tgz"
 ```
 
 **2. Update.** Install the archive for the newer version from [Releases](https://github.com/DSH-Extensions-list/dsh-media-desk/releases).

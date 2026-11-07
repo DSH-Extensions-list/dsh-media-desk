@@ -175,7 +175,7 @@ function voiceBlock(state, voice, item) {
 function publishingBrief(item) {
   const format = draftFormat(item)
   const identity = item.draftIdentity === 'brand'
-    ? 'Write on behalf of the named brand for its intended community. Use only supplied facts for product claims. Add a call to action only when the idea calls for one.'
+    ? 'Write on behalf of the named brand for its intended community. Use only facts supplied by the user for brand claims. Never invent first-person updates, customer stories, benchmarks, offers, or promises to reply. For a community roll call, ask for updates and help requests. Include an organizer’s own update only if supplied. Add a call to action only when the idea calls for one.'
     : item.draftIdentity === 'personal'
       ? 'Write in the creator’s own voice for their personal audience. Keep brand references and promotion limited to what the idea explicitly asks for.'
       : ''

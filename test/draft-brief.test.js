@@ -14,6 +14,7 @@ test('a brand roll call uses the item brief and excludes unrelated global style 
     assert.match(prompt.user, /BharatCode\.ai/)
     assert.match(prompt.user, /Weekly roll call/)
     assert.match(prompt.system, /write that invitation/i)
+    assert.match(prompt.system, /Never invent first-person updates/)
     assert.doesNotMatch(prompt.system, /install the Claude Code plugin|Talk about Claude Code/)
   }
   assert.equal(productionSettings(settings, idea).shotCount, 0)
